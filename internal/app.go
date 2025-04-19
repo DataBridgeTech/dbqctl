@@ -14,6 +14,7 @@ import (
 type DbqApp interface {
 	PingDataSource(srcId string) error
 	ImportDatasets(srcId string, filter string) ([]string, error)
+	ProfileDataSourceById(srcId string, dataset string) (*TableMetrics, error)
 	GetDbqConfig() *DbqConfig
 	SaveDbqConfig() error
 	FindDataSourceById(srcId string) *DataSource
@@ -56,7 +57,16 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 		return []string{}, err
 	}
 
-	return cnn.ImportDatasets(filter)
+	return cnn.ImportDataSets(filter)
+}
+
+func (app *DbqAppImpl) ProfileDataSourceById(srcId string, dataset string) (*TableMetrics, error) {
+	var dataSource = app.FindDataSourceById(srcId)
+	cnn, err := getDbqConnector(*dataSource)
+	if err != nil {
+		return nil, err
+	}
+	return cnn.ProfileDataSet(dataset)
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *DbqConfig {

@@ -10,7 +10,6 @@ datasources:
         database: default
       datasets:
         - default.my_first_table
-        - default.table_2
         - default.trips_small
     - id: pgsql
       type: postgres
