@@ -1,2 +1,0 @@
-# dbq
-DataBridge Quality Core

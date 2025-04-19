@@ -1,0 +1,36 @@
+version: 0.1
+validations:
+  - dataset: clickhouse-prod-euw:ads.my_table_1
+    checks:
+      - id: row number between 0 and 100
+        severity: warn
+        type: row_count
+        params:
+            filter: "timestamp > '2023-01-01'"
+            min: 0
+            max: 100
+
+      - id: "no null values"
+        description: "Check if table_1 has the correct number of columns"
+        severity: error
+        type: custom
+        params:
+          query: SELECT COUNT(*) FROM table_1 WHERE column_name IS NULL
+          expected: 0
+
+      - id: "no duplicates"
+        description: "Check if table_1 has no duplicates"
+        severity: error
+        type: no_duplicates
+        params:
+          columns: ["column_1", "column_2"]
+          filter: "timestamp > '2023-01-01'"
+
+  - dataset: pgsql-staging@[public.table_1, public.table_2]
+    checks:
+      - id: "row count between 0 and 100"
+        severity: warn
+        type: row_count
+        params:
+          min: 0
+          max: 1000
