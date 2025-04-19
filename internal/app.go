@@ -25,31 +25,10 @@ type DbqAppImpl struct {
 }
 
 func NewDbqApp(dbqConfigPath string) DbqApp {
-	v := viper.New()
-
-	if dbqConfigPath != "" {
-		v.SetConfigFile(dbqConfigPath)
-	} else {
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-		v.AddConfigPath(home)
-		v.SetConfigType("yaml")
-		v.SetConfigName(".dbq.yaml")
-	}
-
-	v.AutomaticEnv()
-	if err := v.ReadInConfig(); err != nil {
-		cobra.CheckErr(err)
-	}
-
-	var dbqConfig DbqConfig
-	if err := v.Unmarshal(&dbqConfig); err != nil {
-		cobra.CheckErr(err)
-	}
-
+	dbqConfig := initConfig(dbqConfigPath)
 	return &DbqAppImpl{
 		dbqConfigPath: dbqConfigPath,
-		dbqConfig:     &dbqConfig,
+		dbqConfig:     dbqConfig,
 	}
 }
 
@@ -77,7 +56,7 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 		return []string{}, err
 	}
 
-	return cnn.ImportDatasets()
+	return cnn.ImportDatasets(filter)
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *DbqConfig {
@@ -105,6 +84,32 @@ func (app *DbqAppImpl) FindDataSourceById(srcId string) *DataSource {
 		}
 	}
 	return nil
+}
+
+func initConfig(dbqConfigPath string) *DbqConfig {
+	v := viper.New()
+
+	if dbqConfigPath != "" {
+		v.SetConfigFile(dbqConfigPath)
+	} else {
+		home, err := os.UserHomeDir()
+		cobra.CheckErr(err)
+		v.AddConfigPath(home)
+		v.SetConfigType("yaml")
+		v.SetConfigName(".dbq.yaml")
+	}
+
+	v.AutomaticEnv()
+	if err := v.ReadInConfig(); err != nil {
+		cobra.CheckErr(err)
+	}
+
+	var dbqConfig DbqConfig
+	if err := v.Unmarshal(&dbqConfig); err != nil {
+		cobra.CheckErr(err)
+	}
+
+	return &dbqConfig
 }
 
 func getDbqConnector(ds DataSource) (DbqConnector, error) {

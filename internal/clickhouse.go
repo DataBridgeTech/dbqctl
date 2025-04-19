@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"strings"
 )
 
 type ClickhouseDbqConnector struct {
@@ -33,21 +34,29 @@ func (c *ClickhouseDbqConnector) Ping() error {
 	return c.cnn.Ping(context.Background())
 }
 
-func (c *ClickhouseDbqConnector) ImportDatasets() ([]string, error) {
+func (c *ClickhouseDbqConnector) ImportDatasets(filter string) ([]string, error) {
 	if c.cnn == nil {
 		return nil, fmt.Errorf("database connection is not initialized")
 	}
 
-	// Query to select database and table names from the system.tables table.
-	// We exclude the 'system' database as it usually contains internal tables.
-	// You might want to exclude 'INFORMATION_SCHEMA' or others depending on your needs.
-	query := `SELECT database, name FROM system.tables WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA') ORDER BY database, name;`
+	var args []interface{}
+	query := `
+        SELECT database, name
+        FROM system.tables
+        WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')`
 
-	rows, err := c.cnn.Query(context.Background(), query)
+	filter = strings.TrimSpace(filter)
+	if filter != "" {
+		query += ` AND name LIKE ?`
+		args = append(args, "%"+filter+"%")
+	}
+	query += ` ORDER BY database, name;`
+
+	rows, err := c.cnn.Query(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query system.tables: %w", err)
 	}
-	defer rows.Close() // todo: needed?
+	defer rows.Close()
 
 	var datasets []string
 	for rows.Next() {
@@ -64,31 +73,3 @@ func (c *ClickhouseDbqConnector) ImportDatasets() ([]string, error) {
 
 	return datasets, nil
 }
-
-//func hehe_click() {
-//	conn, err := connect()
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	ctx := context.Background()
-//	rows, err := conn.Query(ctx, "SELECT name, toString(uuid) as uuid_str FROM system.tables LIMIT 5")
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	for rows.Next() {
-//		var (
-//			name, uuid string
-//		)
-//		if err := rows.Scan(
-//			&name,
-//			&uuid,
-//		); err != nil {
-//			log.Fatal(err)
-//		}
-//		log.Printf("name: %s, uuid: %s",
-//			name, uuid)
-//	}
-//
-//}

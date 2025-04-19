@@ -2,5 +2,5 @@ package internal
 
 type DbqConnector interface {
 	Ping() error
-	ImportDatasets() ([]string, error)
+	ImportDatasets(filter string) ([]string, error)
 }
