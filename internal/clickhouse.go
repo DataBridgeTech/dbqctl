@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"log"
 )
 
 type ClickhouseDbqConnector struct {
@@ -63,7 +62,6 @@ func (c *ClickhouseDbqConnector) ImportDatasets() ([]string, error) {
 		return nil, fmt.Errorf("error occurred during row iteration: %w", err)
 	}
 
-	log.Printf("Found %d datasets (tables).\n", len(datasets))
 	return datasets, nil
 }
 

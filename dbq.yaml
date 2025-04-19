@@ -1,24 +1,23 @@
-version: 1
+version: "1"
 datasources:
-  - id: clickhouse-prod
-    type: clickhouse
-    configuration:
-      host: 0.0.0.0:19000
-      port: 19000
-      username: default
-      password: changeme
-      database: default
-    datasets:
-      - default.my_table_1
-      - default.my_table_2
-      - ads.my_table_1
-      - kpi.some_table
-  - id: pgsql-staging
-    type: postgres
-    configuration:
-      host: 127.0.0.1
-      port: 9004
-      username: simple
-      password: simple_pass
-    datasets:
-      - public.table_1
+    - id: ch-local
+      type: clickhouse
+      configuration:
+        host: 0.0.0.0:19000
+        port: 19000
+        username: default
+        password: changeme
+        database: default
+      datasets:
+        - default.my_first_table
+        - default.table_2
+        - default.trips_small
+    - id: pgsql
+      type: postgres
+      configuration:
+        host: 127.0.0.1
+        port: 9004
+        username: simple
+        password: simple_pass
+      datasets:
+        - public.table_1

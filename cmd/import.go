@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"dbq/internal"
-	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -24,16 +24,21 @@ to quickly create a Cobra application.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			datasets, err := app.ImportDatasets(dataSource, filter)
 			if err != nil {
-				fmt.Println("Failed to fetch datasets: " + err.Error())
+				log.Println("Failed to fetch datasets: " + err.Error())
 				return nil
 			}
 
-			for _, dataset := range datasets {
-				fmt.Println("Imported dataset: ", dataset)
-			}
-
+			log.Printf("Found %d datasets to import: %v\n", len(datasets), datasets)
 			if updateCfg {
-				fmt.Println("Updating dbq config...")
+				ds := app.FindDataSourceById(dataSource)
+				if ds != nil {
+					ds.Datasets = datasets
+					err := app.SaveDbqConfig()
+					if err != nil {
+						return err
+					}
+					log.Println("dbq config has been updated")
+				}
 			}
 
 			return nil

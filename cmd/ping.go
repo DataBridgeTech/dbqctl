@@ -29,7 +29,6 @@ to quickly create a Cobra application.`,
 	}
 
 	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource")
-	//_ = cmd.MarkFlagRequired("dataSource")
 
 	return cmd
 }

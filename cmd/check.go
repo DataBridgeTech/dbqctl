@@ -25,7 +25,6 @@ to quickly create a Cobra application.`,
 			if dataSource != "" {
 				fmt.Println("Data source is not empty: " + dataSource)
 			}
-			app.GetDbqConfig()
 			return nil
 		},
 	}
