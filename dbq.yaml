@@ -11,6 +11,7 @@ datasources:
       datasets:
         - default.my_first_table
         - default.trips_small
+        - uk.uk_price_paid
     - id: pgsql
       type: postgres
       configuration:

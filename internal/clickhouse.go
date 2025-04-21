@@ -33,8 +33,18 @@ func NewClickhouseDbqConnector(dataSource DataSource) (DbqConnector, error) {
 	}, err
 }
 
-func (c *ClickhouseDbqConnector) Ping() error {
-	return c.cnn.Ping(context.Background())
+func (c *ClickhouseDbqConnector) Ping() (string, error) {
+	err := c.cnn.Ping(context.Background())
+	if err != nil {
+		return "", err
+	}
+
+	info, err := c.cnn.ServerVersion()
+	if err != nil {
+		return "", err
+	}
+
+	return info.String(), nil
 }
 
 func (c *ClickhouseDbqConnector) ImportDataSets(filter string) ([]string, error) {

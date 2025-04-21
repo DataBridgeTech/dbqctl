@@ -6,13 +6,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
-	"log"
 	"os"
 	"strings"
 )
 
 type DbqApp interface {
-	PingDataSource(srcId string) error
+	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
 	ProfileDataSourceById(srcId string, dataset string) (*TableMetrics, error)
 	GetDbqConfig() *DbqConfig
@@ -33,21 +32,20 @@ func NewDbqApp(dbqConfigPath string) DbqApp {
 	}
 }
 
-func (app *DbqAppImpl) PingDataSource(srcId string) error {
+func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	log.Println("Pinging datasource: " + dataSource.ID)
-	err = cnn.Ping()
+	info, err := cnn.Ping()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return info, nil
 }
 
 func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, error) {

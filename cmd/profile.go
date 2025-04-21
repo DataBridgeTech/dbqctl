@@ -13,13 +13,14 @@ func NewProfileCommand(app internal.DbqApp) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "profile",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+		Short: "Collects dataset's information and generates column statistics",
+		Long: `The 'profile' command connects to the specified data source and analyzes a given dataset. It gathers essential information about the table, such as the total number of rows. 
+Additionally, for each column within the table, it calculates and reports various statistical metrics. These metrics may include the minimum value, maximum value, the count of null or missing values, the data type, 
+and other relevant statistics depending on the data type and the capabilities of the underlying data source.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+This command is useful for understanding the characteristics and quality of your data. It provides a quick overview of the data distribution, identifies potential data quality issues like missing values, 
+and helps in making better decisions about data processing and analysis.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var dataSetsToProfile []string
 			if dataSet != "" {

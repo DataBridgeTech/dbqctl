@@ -5,7 +5,7 @@ import (
 )
 
 type DbqConnector interface {
-	Ping() error
+	Ping() (string, error)
 	ImportDataSets(filter string) ([]string, error)
 	ProfileDataSet(dataSet string) (*TableMetrics, error)
 }

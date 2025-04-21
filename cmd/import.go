@@ -14,13 +14,11 @@ func NewImportCommand(app internal.DbqApp) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "import",
-		Short: "A brief description of your command",
-		Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+		Short: "Connects to a data source and imports all available tables as datasets",
+		Long: `The 'import' command establishes a connection to the specified data source using the provided connection parameters. It retrieves a list of all available tables within the data source and transforms them into datasets within dbq.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+This command is useful for quickly onboarding data from external systems, allowing you to easily access and work with already existing data.
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			datasets, err := app.ImportDatasets(dataSource, filter)
 			if err != nil {

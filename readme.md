@@ -12,28 +12,32 @@ It is designed to be easy to use and integrate into your existing workflow.
 
 ## 0.1
 - [x] basic structure
-- [ ] config parser
-- [ ] clickhouse support
+- [ ] define checks cfg v1
+- [ ] checks cfg parser v1
+- [ ] complete clickhouse support
   - [x] ping
   - [x] import datasets
-  - [x] profile dataset
+  - [ ] profile dataset
     - [x] rows in table
     - [x] min, max, avg, stddev for numeric columns
     - [x] count of nulls and blanks
     - [x] most frequent value in column
+    - [ ] JSON export
   - [ ] run checks
 - [ ] implement support for custom sql check 
 - [ ] implement aliases for common checks based on raw sql check
 - [ ] basic cross validation (dataset is defined)
-- [ ] fix cmd descriptions
+- [x] fix cmd descriptions
 - [ ] review todos
 - [ ] review logs
+- [ ] review crashes (wrong arguments)
 
 ## 0.2
 - config validation
 - add postgres support
 - CLI for adding more checks
 - schema changes checks
+- AirFlow integration (operator)
 
 
 ---
