@@ -1,37 +1,84 @@
 version: "1"
 validations:
-  - dataset: clickhouse-prod-euw@[ads.my_table_1]
-    where: "timestamp > '2025-01-01'"
+  # todo: support arrays of data sets [ ... ]
+  - dataset: ch-local@nyc_taxi.trips_small
+    where: "pickup_datetime > '2014-01-01'"
     checks:
-      - id: row count between 0 and 100
-        severity: error
-        type: row_count
-        params:
-            # filter: "timestamp > '2023-01-01'"
-            min: 0
-            max: 100
+      - id: row_count > 0
+        description: "data is present" # optional
+        severity: error # optional (error, warn, info), default "error"
 
-      - id: "no null values"
-        description: "Check if table_1 has the correct number of columns" # optional
+      - id: null_count(pickup_ntaname) == 0
+        description: "no nulls in column" # optional
         severity: error
-        type: custom
-        params:
-          query: SELECT COUNT(*) FROM ${table} WHERE column_name IS NULL
-          expected: 0
 
-      - id: "no duplicates"
-        description: "Check if table_1 has no duplicates"
+      - id: min(pickup_datetime) < now() - interval 3 day
+        description: "min check"
         severity: error
-        type: no_duplicates
-        params:
-          columns: ["column_1", "column_2"]
-          # filter: "timestamp > '2023-01-01'"
 
-  - dataset: pgsql-staging@[public.table_1, public.table_2]
-    checks:
-      - id: "row count between 0 and 100"
-        severity: warn
-        type: row_count
-        params:
-          min: 0
-          max: 1000
+      # todo: support "between X and Y"
+      - id: stddevPop(trip_distance) < 100_000
+        description: "check stddev value"
+        severity: error
+
+      - id: sum(fare_amount) <= 10_000_000
+        description: "sum of value"
+        severity: error
+
+      - id: raw_query
+        description: "some raw query description here"
+        severity: error
+        query: |
+          select countIf(trip_distance == 0) > 0 from {{table}}
+
+#  - dataset: pgsql-staging@[public.table_1, public.table_2]
+#    checks:
+#      - id: "row count between 0 and 100"
+#        severity: warn
+#        type: row_count
+#        params:
+#          min: 0
+#          max: 1000
+
+# v1 supported functions:
+# ---
+# row_count > 10
+# null_count(col) == 0
+# avg(col) <= 24.2
+# max(col) < 1000
+# min(col) == 0
+# sum(col) > 0
+# stddev(col) between 1 and 100_000_000
+# custom
+
+# AI anomaly detection
+
+# empties / blanks
+# invalid count with filter
+# duplicates
+#  avg_length
+#  cross
+#  distribution
+#  duplicate_count
+#  duplicate_percent
+#  failed rows
+#  freshness
+#  group by
+#  group evolution
+#  invalid_count
+#  invalid_percent
+#  max_length
+#  min_length
+#  missing_count
+#  missing_percent
+#  percentile
+#  reconciliation
+#  reference
+#  schema
+#  schema evolution
+#  stddev_pop
+#  stddev_samp
+#  user-defined
+#  variance
+#  var_pop
+#  var_samp

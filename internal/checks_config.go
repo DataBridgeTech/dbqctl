@@ -11,25 +11,17 @@ type ChecksConfig struct {
 	Validations []Validation `yaml:"validations"`
 }
 
-type ConfigDetails struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Database string `yaml:"database,omitempty"`
-}
-
 type Validation struct {
 	Dataset string  `yaml:"dataset"`
+	Where   string  `yaml:"where,omitempty"` // Optional where clause
 	Checks  []Check `yaml:"checks"`
 }
 
 type Check struct {
-	ID          string                 `yaml:"id"`
-	Description string                 `yaml:"description,omitempty"`
-	Severity    string                 `yaml:"severity"`
-	Type        string                 `yaml:"type"`
-	Params      map[string]interface{} `yaml:"params"`
+	ID          string `yaml:"id"`
+	Description string `yaml:"description,omitempty"` // Optional
+	Severity    string `yaml:"severity,omitempty"`    // Optional (error, warn, info)
+	Query       string `yaml:"query,omitempty"`       // Optional raw query
 }
 
 func LoadChecksConfig(fileName string) (*ChecksConfig, error) {

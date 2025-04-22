@@ -8,7 +8,12 @@ type DbqConnector interface {
 	Ping() (string, error)
 	ImportDataSets(filter string) ([]string, error)
 	ProfileDataSet(dataSet string) (*TableMetrics, error)
+	RunCheck(check *Check, dataSet string, defaultWhere string) (string, error)
 }
+
+const (
+	CheckTypeRawQuery = "raw_query"
+)
 
 type ColumnMetrics struct {
 	ColumnName        string          `json:"column_name"`

@@ -18,6 +18,14 @@ type DataSource struct {
 	Datasets      []string      `yaml:"datasets"`
 }
 
+type ConfigDetails struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Database string `yaml:"database,omitempty"`
+}
+
 func LoadDbqSetting(fileName string) (*DbqConfig, error) {
 	file, err := os.Open(fileName)
 	defer file.Close()

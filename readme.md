@@ -31,6 +31,7 @@ It is designed to be easy to use and integrate into your existing workflow.
 - [ ] review todos
 - [ ] review logs
 - [ ] review crashes (wrong arguments)
+- [ ] default values (e.g. severity)
 
 ## 0.2
 - config validation
@@ -41,6 +42,12 @@ It is designed to be easy to use and integrate into your existing workflow.
 
 
 ---
+
+## Checks config specification
+- raw_query(query = "...")
+- row_count
+- null_count(col)
+- <aggr_function> <op> <rest>
 
 ### clickhouse 
 

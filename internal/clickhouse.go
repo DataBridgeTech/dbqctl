@@ -7,6 +7,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -243,6 +244,116 @@ func (c *ClickhouseDbqConnector) ProfileDataSet(dataSet string) (*TableMetrics, 
 	return metrics, nil
 }
 
+func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataSet string, defaultWhere string) (string, error) {
+	if c.cnn == nil {
+		return "", fmt.Errorf("database connection is not initialized")
+	}
+
+	query, err := generateDataCheckQuery(check, dataSet, defaultWhere)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate SQL for check %s (%s): %s", check.ID, dataSet, err.Error())
+	}
+
+	log.Printf("Executing SQL for (%s): %s", check.ID, query)
+
+	startTime := time.Now()
+	rows, err := c.cnn.Query(context.Background(), query)
+	if err != nil {
+		return "", fmt.Errorf("failed to query database: %w", err)
+	}
+	defer rows.Close()
+	elapsed := time.Since(startTime).Milliseconds()
+
+	for rows.Next() {
+		var checkPassed bool
+		if err := rows.Scan(&checkPassed); err != nil {
+			return "", fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		log.Printf("Result is: %t (%d ms)", checkPassed, elapsed)
+		log.Printf("---")
+	}
+
+	if err = rows.Err(); err != nil {
+		return "", fmt.Errorf("error occurred during row iteration: %w", err)
+	}
+
+	return "", nil
+}
+
+func generateDataCheckQuery(check *Check, dataSet string, whereClause string) (string, error) {
+	var sqlQuery string
+
+	// handle raw_query first
+	if check.ID == CheckTypeRawQuery {
+		if check.Query == "" {
+			return "", fmt.Errorf("check with id 'raw_query' requires a 'query' field")
+		}
+		sqlQuery = strings.ReplaceAll(check.Query, "{{table}}", dataSet)
+
+		if whereClause != "" {
+			// todo: more sophisticated check might be needed
+			if strings.Contains(strings.ToLower(sqlQuery), " where ") {
+				sqlQuery = fmt.Sprintf("%s and (%s)", sqlQuery, whereClause)
+			} else {
+				sqlQuery = fmt.Sprintf("%s where %s", sqlQuery, whereClause)
+			}
+		}
+
+		return sqlQuery, nil
+	}
+
+	isAggFunction := startWithAnyOf([]string{
+		"min", "max", "avg", "stddevPop", "sum",
+	}, check.ID)
+
+	var checkExpression string
+	switch {
+	case strings.HasPrefix(check.ID, "row_count"):
+		// format "row_count <operator> <value>"
+		parts := strings.Fields(check.ID)
+		if len(parts) != 3 {
+			return "", fmt.Errorf("invalid format for row_count check: %s", check.ID)
+		}
+		checkExpression = fmt.Sprintf("count() %s %s", parts[1], parts[2])
+
+	case strings.HasPrefix(check.ID, "null_count"):
+		// format "null_count(<column_name>) <operator> <value>"
+		re := regexp.MustCompile(`null_count\((.*?)\)\s*(==|!=|>|<|>=|<=)\s*(\d+)`)
+		matches := re.FindStringSubmatch(check.ID)
+		if len(matches) != 4 {
+			return "", fmt.Errorf("invalid format for null_count check: %s", check.ID)
+		}
+
+		column := matches[1]
+		operator := matches[2]
+		value := matches[3]
+		checkExpression = fmt.Sprintf("countIf(%s IS NULL) %s %s", column, operator, value)
+
+	case isAggFunction:
+		// format: <func>(<column_name>) <operator> <value>
+		re := regexp.MustCompile(`^(min|max|avg|stddevPop|sum)\(([^)]+)\)\s+(==|>=|<=|>|<)\s+(.*)$`)
+		matches := re.FindStringSubmatch(check.ID)
+		if len(matches) < 4 {
+			return "", fmt.Errorf("invalid format for aggregation function check: %s", check.ID)
+		}
+		checkExpression = fmt.Sprintf("%s", matches[0])
+
+	default:
+		// Assume the ID itself is a valid boolean expression if no specific pattern matches
+		// This is less robust but covers simple cases.
+		log.Printf("Warning: Check ID '%s' did not match known patterns. Assuming it's a direct SQL boolean expression.", check.ID)
+		checkExpression = check.ID
+	}
+
+	sqlQuery = fmt.Sprintf("select %s from %s", checkExpression, dataSet)
+	if whereClause != "" {
+		sqlQuery = fmt.Sprintf("%s where %s", sqlQuery, whereClause)
+	}
+
+	return sqlQuery, nil
+}
+
 // isNumericCHType checks if a ClickHouse data type string represents a numeric type
 // that supports standard aggregate functions like min, max, avg, stddev
 func isNumericCHType(dataType string) bool {
@@ -259,4 +370,13 @@ func isStringCHType(dataType string) bool {
 	dataType = strings.ToLower(dataType)
 	return strings.HasPrefix(dataType, "string") ||
 		strings.HasPrefix(dataType, "fixedstring")
+}
+
+func startWithAnyOf(prefixes []string, s string) bool {
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(s, prefix) {
+			return true
+		}
+	}
+	return false
 }
