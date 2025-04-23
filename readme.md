@@ -56,3 +56,6 @@ It is designed to be easy to use and integrate into your existing workflow.
 ```bash
 docker run -d -p 18123:8123 -p19000:9000 -e CLICKHOUSE_PASSWORD=changeme --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
 ```
+
+# Supported Datasources
+- Clickhouse
