@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -13,7 +12,7 @@ import (
 type DbqApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
-	ProfileDataSourceById(srcId string, dataset string) (*TableMetrics, error)
+	ProfileDataset(srcId string, dataset string) (*TableMetrics, error)
 	GetDbqConfig() *DbqConfig
 	SaveDbqConfig() error
 	FindDataSourceById(srcId string) *DataSource
@@ -26,9 +25,9 @@ type DbqAppImpl struct {
 }
 
 func NewDbqApp(dbqConfigPath string) DbqApp {
-	dbqConfig := initConfig(dbqConfigPath)
+	dbqConfig, dbqConfigUsedPath := initConfig(dbqConfigPath)
 	return &DbqAppImpl{
-		dbqConfigPath: dbqConfigPath,
+		dbqConfigPath: dbqConfigUsedPath,
 		dbqConfig:     dbqConfig,
 	}
 }
@@ -56,16 +55,16 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 		return []string{}, err
 	}
 
-	return cnn.ImportDataSets(filter)
+	return cnn.ImportDatasets(filter)
 }
 
-func (app *DbqAppImpl) ProfileDataSourceById(srcId string, dataset string) (*TableMetrics, error) {
+func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string) (*TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
 		return nil, err
 	}
-	return cnn.ProfileDataSet(dataset)
+	return cnn.ProfileDataset(dataset)
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *DbqConfig {
@@ -103,7 +102,7 @@ func (app *DbqAppImpl) RunCheck(check *Check, dataSource *DataSource, dataSet st
 	return cnn.RunCheck(check, dataSet, defaultWhere)
 }
 
-func initConfig(dbqConfigPath string) *DbqConfig {
+func initConfig(dbqConfigPath string) (*DbqConfig, string) {
 	v := viper.New()
 
 	if dbqConfigPath != "" {
@@ -126,7 +125,7 @@ func initConfig(dbqConfigPath string) *DbqConfig {
 		cobra.CheckErr(err)
 	}
 
-	return &dbqConfig
+	return &dbqConfig, v.ConfigFileUsed()
 }
 
 func getDbqConnector(ds DataSource) (DbqConnector, error) {
@@ -135,6 +134,6 @@ func getDbqConnector(ds DataSource) (DbqConnector, error) {
 	case "clickhouse":
 		return NewClickhouseDbqConnector(ds)
 	default:
-		return nil, errors.New(fmt.Sprintf("Data source type '%s' is not supported.", dsType))
+		return nil, fmt.Errorf("data source type '%s' is not supported", dsType)
 	}
 }

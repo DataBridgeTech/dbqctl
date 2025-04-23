@@ -1,12 +1,15 @@
 version: "1"
 validations:
-  # todo: support arrays of data sets [ ... ]
-  - dataset: ch-local@nyc_taxi.trips_small
+  - dataset: ch-local@[nyc_taxi.trips_small]
     where: "pickup_datetime > '2014-01-01'"
     checks:
       - id: row_count > 0
         description: "data is present" # optional
         severity: error # optional (error, warn, info), default "error"
+
+      - id: row_count between 100 and 30000
+        description: "data is not too big"
+        severity: error
 
       - id: null_count(pickup_ntaname) == 0
         description: "no nulls in column" # optional
@@ -16,7 +19,6 @@ validations:
         description: "min check"
         severity: error
 
-      # todo: support "between X and Y"
       - id: stddevPop(trip_distance) < 100_000
         description: "check stddev value"
         severity: error
@@ -52,33 +54,3 @@ validations:
 # custom
 
 # AI anomaly detection
-
-# empties / blanks
-# invalid count with filter
-# duplicates
-#  avg_length
-#  cross
-#  distribution
-#  duplicate_count
-#  duplicate_percent
-#  failed rows
-#  freshness
-#  group by
-#  group evolution
-#  invalid_count
-#  invalid_percent
-#  max_length
-#  min_length
-#  missing_count
-#  missing_percent
-#  percentile
-#  reconciliation
-#  reference
-#  schema
-#  schema evolution
-#  stddev_pop
-#  stddev_samp
-#  user-defined
-#  variance
-#  var_pop
-#  var_samp

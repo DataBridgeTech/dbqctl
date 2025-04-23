@@ -39,7 +39,7 @@ and helps in making better decisions about data processing and analysis.
 			}
 
 			for _, curDataSet := range dataSetsToProfile {
-				metrics, err := app.ProfileDataSourceById(dataSource, curDataSet)
+				metrics, err := app.ProfileDataset(dataSource, curDataSet)
 				if err != nil {
 					log.Printf("Failed to profile %s: %s\n", curDataSet, err)
 				} else {

@@ -32,6 +32,8 @@ It is designed to be easy to use and integrate into your existing workflow.
 - [ ] review logs
 - [ ] review crashes (wrong arguments)
 - [ ] default values (e.g. severity)
+- [ ] improve output
+- [ ] quiet/verbose mode for logs
 
 ## 0.2
 - config validation

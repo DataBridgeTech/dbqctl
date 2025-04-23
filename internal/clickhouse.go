@@ -35,11 +35,6 @@ func NewClickhouseDbqConnector(dataSource DataSource) (DbqConnector, error) {
 }
 
 func (c *ClickhouseDbqConnector) Ping() (string, error) {
-	err := c.cnn.Ping(context.Background())
-	if err != nil {
-		return "", err
-	}
-
 	info, err := c.cnn.ServerVersion()
 	if err != nil {
 		return "", err
@@ -48,17 +43,17 @@ func (c *ClickhouseDbqConnector) Ping() (string, error) {
 	return info.String(), nil
 }
 
-func (c *ClickhouseDbqConnector) ImportDataSets(filter string) ([]string, error) {
+func (c *ClickhouseDbqConnector) ImportDatasets(filter string) ([]string, error) {
 	if c.cnn == nil {
 		return nil, fmt.Errorf("database connection is not initialized")
 	}
 
-	var args []interface{}
 	query := `
         SELECT database, name
         FROM system.tables
         WHERE database NOT IN ('system', 'information_schema', 'INFORMATION_SCHEMA')`
 
+	var args []interface{}
 	filter = strings.TrimSpace(filter)
 	if filter != "" {
 		query += ` AND name LIKE ?`
@@ -66,7 +61,7 @@ func (c *ClickhouseDbqConnector) ImportDataSets(filter string) ([]string, error)
 	}
 	query += ` ORDER BY database, name;`
 
-	rows, err := c.cnn.Query(context.Background(), query, args...)
+	rows, err := c.cnn.Query(context.Background(), query, args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query system.tables: %w", err)
 	}
@@ -88,69 +83,44 @@ func (c *ClickhouseDbqConnector) ImportDataSets(filter string) ([]string, error)
 	return datasets, nil
 }
 
-// ProfileDataSet todo: optimize queries
-func (c *ClickhouseDbqConnector) ProfileDataSet(dataSet string) (*TableMetrics, error) {
+func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, error) {
 	startTime := time.Now()
 	ctx := context.Background()
 
 	var databaseName, tableName string
-	parts := strings.SplitN(dataSet, ".", 2)
+	parts := strings.SplitN(dataset, ".", 2)
 	if len(parts) == 2 {
 		databaseName = strings.TrimSpace(parts[0])
 		tableName = strings.TrimSpace(parts[1])
 	}
 
-	log.Printf("Calculating metrics for table: %s", dataSet)
-
 	metrics := &TableMetrics{
-		ProfiledAt:   time.Now().Unix(),
-		TableName:    tableName,
-		DatabaseName: databaseName,
-		Columns:      make(map[string]*ColumnMetrics),
+		ProfiledAt:     time.Now().Unix(),
+		TableName:      tableName,
+		DatabaseName:   databaseName,
+		ColumnsMetrics: make(map[string]*ColumnMetrics),
 	}
+
+	log.Printf("Calculating metrics for table: %s", dataset)
+
+	// ProfileDataSet todo: optimize/batch queries where possible
 
 	// Total Row Count
 	log.Printf("Fetching total row count...")
-	err := c.cnn.QueryRow(ctx, fmt.Sprintf("SELECT count() FROM %s", dataSet)).Scan(&metrics.TotalRows)
+	err := c.cnn.QueryRow(ctx, fmt.Sprintf("SELECT count() FROM %s", dataset)).Scan(&metrics.TotalRows)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get total row count for %s: %w", dataSet, err)
+		return nil, fmt.Errorf("failed to get total row count for %s: %w", dataset, err)
 	}
 	log.Printf("Total rows: %d", metrics.TotalRows)
 
 	// Get Column Information (Name and Type)
-	log.Printf("Fetching column information...")
-	columnQuery := `
-        SELECT name, type
-        FROM system.columns
-        WHERE database = ? AND table = ?
-        ORDER BY position`
-	rows, err := c.cnn.Query(ctx, columnQuery, databaseName, tableName)
+	columnsToProcess, err := fetchColumns(c.cnn, ctx, databaseName, tableName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query system.columns for %s.%s: %w", databaseName, tableName, err)
+		return metrics, err
 	}
-	defer rows.Close()
-
-	var columnsToProcess []struct {
-		Name string
-		Type string
-	}
-	for rows.Next() {
-		var colName, colType string
-		if err := rows.Scan(&colName, &colType); err != nil {
-			return nil, fmt.Errorf("failed to scan column info: %w", err)
-		}
-		columnsToProcess = append(columnsToProcess, struct {
-			Name string
-			Type string
-		}{Name: colName, Type: colType})
-	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating column info rows: %w", err)
-	}
-	rows.Close()
 
 	if len(columnsToProcess) == 0 {
-		log.Printf("Warning: No columns found for table %s. Returning basic info.", dataSet)
+		log.Printf("Warning: No columns found for table %s. Returning basic info.", dataset)
 		metrics.ProfilingDurationMs = time.Since(startTime).Milliseconds()
 		return metrics, nil
 	}
@@ -162,96 +132,105 @@ func (c *ClickhouseDbqConnector) ProfileDataSet(dataSet string) (*TableMetrics, 
 		colStartTime := time.Now()
 		log.Printf("Processing column: %s (Type: %s)", col.Name, col.Type)
 		colMetrics := &ColumnMetrics{
-			ColumnName: col.Name,
-			DataType:   col.Type,
+			ColumnName:    col.Name,
+			DataType:      col.Type,
+			ColumnComment: col.Comment,
 		}
 
-		// a) Null Count (all types)
-		nullQuery := fmt.Sprintf("SELECT count() FROM %s WHERE %s IS NULL", dataSet, col.Name)
+		// Null Count (all types)
+		nullQuery := fmt.Sprintf("select count() from %s where isNull(%s)", dataset, col.Name)
 		err = c.cnn.QueryRow(ctx, nullQuery).Scan(&colMetrics.NullCount)
 		if err != nil {
-			// Log error but continue if possible, maybe column type doesn't support NULL checks easily?
 			log.Printf("Warning: Failed to get NULL count for column %s: %v", col.Name, err)
 		}
 
-		// b) Blank Count (String types only)
+		// Blank Count (String types only)
 		if isStringCHType(col.Type) {
-			blankQuery := fmt.Sprintf("SELECT count() FROM %s WHERE empty(%s)", dataSet, col.Name)
-			// Alternative: SELECT countIf(%s = '') FROM %s
+			blankQuery := fmt.Sprintf("select count() from %s where empty(%s)", dataset, col.Name)
 			var blankCount uint64
 			err = c.cnn.QueryRow(ctx, blankQuery).Scan(&blankCount)
 			if err != nil {
 				log.Printf("Warning: Failed to get blank count for string column %s: %v", col.Name, err)
-				colMetrics.BlankCount = sql.NullInt64{Valid: false}
+				colMetrics.BlankCount = nil
 			} else {
-				colMetrics.BlankCount = sql.NullInt64{Int64: int64(blankCount), Valid: true}
+				val := int64(blankCount)
+				colMetrics.BlankCount = &val
 			}
 		}
 
-		// c) Numeric Metrics (Numeric types only)
+		// Numeric Metrics (Numeric types only)
 		if isNumericCHType(col.Type) {
-			// Use Nullable aggregates to handle cases where all values are NULL or table is empty
-			// Use toFloat64 to ensure results are float64 for consistency, handle potential overflows if needed
+			// todo: check null handling
 			numericQuery := fmt.Sprintf(`
-                SELECT
+                select
                     min(%s),
                     max(%s),
                     avg(%s),
                     stddevPop(%s)
-                FROM %s`, col.Name, col.Name, col.Name, col.Name, dataSet)
+                from %s`, col.Name, col.Name, col.Name, col.Name, dataset)
+
+			var minValue sql.NullFloat64
+			var maxValue sql.NullFloat64
+			var avgValue sql.NullFloat64
+			var stddevValue sql.NullFloat64
 
 			err = c.cnn.QueryRow(ctx, numericQuery).Scan(
-				&colMetrics.MinValue,
-				&colMetrics.MaxValue,
-				&colMetrics.AvgValue,
-				&colMetrics.StddevValue,
+				&minValue,
+				&maxValue,
+				&avgValue,
+				&stddevValue,
 			)
 
 			if err != nil {
 				log.Printf("Warning: Failed to get numeric aggregates for column %s: %v", col.Name, err)
-				// invalidate potentially partially scanned results
-				colMetrics.MinValue = sql.NullFloat64{Valid: false}
-				colMetrics.MaxValue = sql.NullFloat64{Valid: false}
-				colMetrics.AvgValue = sql.NullFloat64{Valid: false}
-				colMetrics.StddevValue = sql.NullFloat64{Valid: false}
+			} else {
+				if minValue.Valid {
+					colMetrics.MinValue = &minValue.Float64
+				}
+				if maxValue.Valid {
+					colMetrics.MaxValue = &maxValue.Float64
+				}
+				if avgValue.Valid {
+					colMetrics.AvgValue = &avgValue.Float64
+				}
+				if stddevValue.Valid {
+					colMetrics.StddevValue = &stddevValue.Float64
+				}
 			}
 		}
 
-		// d) Most Frequent Value (all types - using topK)
-		// topK(1) returns an array, we need to extract the first element if it exists.
+		// Most Frequent Value (all types - using topK)
+		// topK(1) returns an array, we need to extract the first element if it exists
 		// It handles NULL correctly. CAST to String for consistent retrieval.
 		// Note: If the most frequent value is NULL, it should be represented correctly by sql.NullString
-		mfvQuery := fmt.Sprintf("SELECT CAST(arrayElement(topK(1)(%s), 1), 'Nullable(String)') FROM %s", col.Name, dataSet)
+		mfvQuery := fmt.Sprintf("SELECT CAST(arrayElement(topK(1)(%s), 1), 'Nullable(String)') FROM %s", col.Name, dataset)
 		err = c.cnn.QueryRow(ctx, mfvQuery).Scan(&colMetrics.MostFrequentValue)
 		if err != nil {
-			// This can happen if the table is empty or all values are NULL
-			if strings.Contains(err.Error(), "empty result") || strings.Contains(err.Error(), "Illegal type") {
-				log.Printf("Info: No most frequent value found or calculable for column %s (possibly empty or all NULLs).", col.Name)
-				colMetrics.MostFrequentValue = sql.NullString{Valid: false} // Ensure it's marked invalid
-			} else {
-				log.Printf("Warning: Failed to get most frequent value for column %s: %v", col.Name, err)
-				colMetrics.MostFrequentValue = sql.NullString{Valid: false} // Mark as invalid on other errors too
-			}
+			log.Printf("Warning: Failed to get most frequent value for column %s: %v", col.Name, err)
+			colMetrics.MostFrequentValue = nil
 		}
 
-		metrics.Columns[col.Name] = colMetrics
-		log.Printf("Finished column: %s in %s", col.Name, time.Since(colStartTime))
+		elapsed := time.Since(colStartTime).Milliseconds()
+		colMetrics.ProfilingDurationMs = elapsed
+
+		metrics.ColumnsMetrics[col.Name] = colMetrics
+		log.Printf("Finished column: %s in %d ms", col.Name, elapsed)
 	}
 
 	metrics.ProfilingDurationMs = time.Since(startTime).Milliseconds()
-	log.Printf("Finished calculating all metrics for %s in %d ms", dataSet, metrics.ProfilingDurationMs)
+	log.Printf("Finished calculating all metrics for %s in %d ms", dataset, metrics.ProfilingDurationMs)
 
 	return metrics, nil
 }
 
-func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataSet string, defaultWhere string) (string, error) {
+func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataset string, defaultWhere string) (string, error) {
 	if c.cnn == nil {
 		return "", fmt.Errorf("database connection is not initialized")
 	}
 
-	query, err := generateDataCheckQuery(check, dataSet, defaultWhere)
+	query, err := generateDataCheckQuery(check, dataset, defaultWhere)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate SQL for check %s (%s): %s", check.ID, dataSet, err.Error())
+		return "", fmt.Errorf("failed to generate SQL for check %s (%s): %s", check.ID, dataset, err.Error())
 	}
 
 	log.Printf("Executing SQL for (%s): %s", check.ID, query)
@@ -269,9 +248,7 @@ func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataSet string, defaultW
 		if err := rows.Scan(&checkPassed); err != nil {
 			return "", fmt.Errorf("failed to scan row: %w", err)
 		}
-
-		log.Printf("Result is: %t (%d ms)", checkPassed, elapsed)
-		log.Printf("---")
+		log.Printf("Check passed: %t (%d ms)", checkPassed, elapsed)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -279,6 +256,36 @@ func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataSet string, defaultW
 	}
 
 	return "", nil
+}
+
+func fetchColumns(cnn driver.Conn, ctx context.Context, databaseName string, tableName string) ([]ColumnInfo, error) {
+	columnQuery := `
+        SELECT name, type, comment
+        FROM system.columns
+        WHERE database = ? AND table = ?
+        ORDER BY position`
+
+	rows, err := cnn.Query(ctx, columnQuery, databaseName, tableName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch columns info for %s.%s: %w", databaseName, tableName, err)
+	}
+	defer rows.Close()
+
+	var cols []ColumnInfo
+	for rows.Next() {
+		var colName, colType, comment string
+		if err := rows.Scan(&colName, &colType, &comment); err != nil {
+			return nil, fmt.Errorf("failed to scan column info: %w", err)
+		}
+		cols = append(cols, ColumnInfo{Name: colName, Type: colType, Comment: comment})
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating column info rows: %w", err)
+	}
+	rows.Close()
+
+	return cols, nil
 }
 
 func generateDataCheckQuery(check *Check, dataSet string, whereClause string) (string, error) {

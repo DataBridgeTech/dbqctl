@@ -9,6 +9,7 @@ datasources:
         password: changeme
         database: default
       datasets:
+        - nyc_taxi.trips_big
         - nyc_taxi.trips_small
     - id: pgsql
       type: postgres

@@ -1,14 +1,10 @@
 package internal
 
-import (
-	"database/sql"
-)
-
 type DbqConnector interface {
 	Ping() (string, error)
-	ImportDataSets(filter string) ([]string, error)
-	ProfileDataSet(dataSet string) (*TableMetrics, error)
-	RunCheck(check *Check, dataSet string, defaultWhere string) (string, error)
+	ImportDatasets(filter string) ([]string, error)
+	ProfileDataset(dataset string) (*TableMetrics, error)
+	RunCheck(check *Check, dataset string, defaultWhere string) (string, error)
 }
 
 const (
@@ -16,15 +12,17 @@ const (
 )
 
 type ColumnMetrics struct {
-	ColumnName        string          `json:"column_name"`
-	DataType          string          `json:"data_type"`
-	NullCount         uint64          `json:"null_count"`
-	BlankCount        sql.NullInt64   `json:"blank_count,omitempty"`         // Applicable only for String types
-	MinValue          sql.NullFloat64 `json:"min_value,omitempty"`           // Numeric only
-	MaxValue          sql.NullFloat64 `json:"max_value,omitempty"`           // Numeric only
-	AvgValue          sql.NullFloat64 `json:"avg_value,omitempty"`           // Numeric only
-	StddevValue       sql.NullFloat64 `json:"stddev_value,omitempty"`        // Numeric only (Population StdDev)
-	MostFrequentValue sql.NullString  `json:"most_frequent_value,omitempty"` // Using NullString to handle NULL as most frequent
+	ColumnName          string   `json:"column_name"`
+	ColumnComment       string   `json:"column_comment"`
+	DataType            string   `json:"data_type"`
+	NullCount           uint64   `json:"null_count"`
+	BlankCount          *int64   `json:"blank_count,omitempty"`         // Applicable only for String types
+	MinValue            *float64 `json:"min_value,omitempty"`           // Numeric only
+	MaxValue            *float64 `json:"max_value,omitempty"`           // Numeric only
+	AvgValue            *float64 `json:"avg_value,omitempty"`           // Numeric only
+	StddevValue         *float64 `json:"stddev_value,omitempty"`        // Numeric only (Population StdDev)
+	MostFrequentValue   *string  `json:"most_frequent_value,omitempty"` // Using NullString to handle NULL as most frequent
+	ProfilingDurationMs int64    `json:"profiling_duration_ms"`
 }
 
 type TableMetrics struct {
@@ -32,8 +30,14 @@ type TableMetrics struct {
 	TableName           string                    `json:"table_name"`
 	DatabaseName        string                    `json:"database_name"`
 	TotalRows           uint64                    `json:"total_rows"`
-	Columns             map[string]*ColumnMetrics `json:"columns"`
+	ColumnsMetrics      map[string]*ColumnMetrics `json:"columns_metrics"`
 	ProfilingDurationMs int64                     `json:"profiling_duration_ms"`
+}
+
+type ColumnInfo struct {
+	Name    string
+	Type    string
+	Comment string
 }
 
 type ProfileResultOutput struct {
