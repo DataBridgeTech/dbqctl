@@ -22,19 +22,15 @@ jobs:
           - goos: linux
             goarch: amd64
             asset_suffix: linux-amd64
-            compress_ext: .tar.gz
           - goos: linux
             goarch: arm64
             asset_suffix: linux-arm64
-            compress_ext: .tar.gz
           - goos: darwin # macOS
             goarch: amd64
             asset_suffix: darwin-amd64
-            compress_ext: .tar.gz
           - goos: darwin # macOS
             goarch: arm64
             asset_suffix: darwin-arm64
-            compress_ext: .tar.gz
 
     steps:
       - name: Checkout code
@@ -64,7 +60,7 @@ jobs:
         if: matrix.goos == 'linux' || matrix.goos == 'darwin'
         run: |
           BINARY_NAME="${{ env.APP_NAME }}-${{ matrix.asset_suffix }}"
-          ARCHIVE_NAME="${BINARY_NAME}${matrix.compress_ext}"
+          ARCHIVE_NAME="${BINARY_NAME}.tar.gz"
           cd build
           tar czf "../${ARCHIVE_NAME}" "${BINARY_NAME}"
           cd ..
