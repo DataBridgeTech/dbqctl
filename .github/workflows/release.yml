@@ -1,0 +1,101 @@
+name: Release dbq
+
+on:
+  push:
+    tags:
+      # trigger on tags like v1.0.0, v1.2.3 etc.
+      - 'v*.*.*'
+
+env:
+  APP_NAME: dbq
+  MAIN_PACKAGE_PATH: .
+
+permissions:
+  contents: write
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            asset_suffix: linux-amd64
+            compress_ext: .tar.gz
+          - goos: linux
+            goarch: arm64
+            asset_suffix: linux-arm64
+            compress_ext: .tar.gz
+          - goos: darwin # macOS
+            goarch: amd64
+            asset_suffix: darwin-amd64
+            compress_ext: .tar.gz
+          - goos: darwin # macOS
+            goarch: arm64
+            asset_suffix: darwin-arm64
+            compress_ext: .tar.gz
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.2'
+
+      - name: Get dependencies
+        run: go mod download
+
+      - name: Build Go application
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          # Construct the output binary name
+          BINARY_NAME="${{ env.APP_NAME }}-${{ matrix.asset_suffix }}"
+          go build -v -ldflags="-s -w" -o "build/${BINARY_NAME}" ${{ env.MAIN_PACKAGE_PATH }}
+          echo "Built: build/${BINARY_NAME}"
+
+      - name: Compress binary (Linux/macOS)
+        if: matrix.goos == 'linux' || matrix.goos == 'darwin'
+        run: |
+          BINARY_NAME="${{ env.APP_NAME }}-${{ matrix.asset_suffix }}"
+          ARCHIVE_NAME="${BINARY_NAME}${matrix.compress_ext}"
+          cd build
+          tar czf "../${ARCHIVE_NAME}" "${BINARY_NAME}"
+          cd ..
+          echo "Compressed: ${ARCHIVE_NAME}"
+          echo "ASSET_PATH=${ARCHIVE_NAME}" >> $GITHUB_ENV
+          echo "ASSET_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ASSET_NAME }} # Use the compressed archive name as artifact name
+          path: ${{ env.ASSET_PATH }} # Upload the compressed archive
+          retention-days: 1 # Keep artifact only for a short time
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: List downloaded files
+        run: ls -lah release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-assets/*/*
