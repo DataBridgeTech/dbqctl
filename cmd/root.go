@@ -28,7 +28,7 @@ func AddCommands(app internal.DbqApp) {
 }
 
 func init() {
-	// todo: workaround for bootstrap config flag & unsupported flag issue
+	// workaround for bootstrap config flag & unsupported flag issue
 	var dbqConfigFile string
 	rootCmd.PersistentFlags().StringVar(&dbqConfigFile, "config", "", "config file (default is $HOME/.dbq.yaml or ./dbq.yaml)")
 }

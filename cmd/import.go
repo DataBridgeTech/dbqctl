@@ -20,23 +20,36 @@ func NewImportCommand(app internal.DbqApp) *cobra.Command {
 This command is useful for quickly onboarding data from external systems, allowing you to easily access and work with already existing data.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			datasets, err := app.ImportDatasets(dataSource, filter)
-			if err != nil {
-				log.Println("Failed to fetch datasets: " + err.Error())
-				return nil
+			var importFromSources []string
+			if dataSource != "" {
+				importFromSources = append(importFromSources, dataSource)
+			} else {
+				for _, ds := range app.GetDbqConfig().DataSources {
+					importFromSources = append(importFromSources, ds.ID)
+				}
 			}
 
-			log.Printf("Found %d datasets to import: %v\n", len(datasets), datasets)
-			if updateCfg {
+			for _, curDataSource := range importFromSources {
+				datasets, err := app.ImportDatasets(curDataSource, filter)
+				if err != nil {
+					log.Println("Failed to fetch datasets: " + err.Error())
+					return nil
+				}
+
+				log.Printf("Found %d datasets in %s to import: %v\n", len(datasets), curDataSource, datasets)
+
 				ds := app.FindDataSourceById(dataSource)
 				if ds != nil {
 					ds.Datasets = datasets
-					err := app.SaveDbqConfig()
-					if err != nil {
-						return err
-					}
-					log.Println("dbq config has been updated")
 				}
+			}
+
+			if updateCfg {
+				err := app.SaveDbqConfig()
+				if err != nil {
+					return err
+				}
+				log.Println("dbq config has been updated")
 			}
 
 			return nil
@@ -44,8 +57,6 @@ This command is useful for quickly onboarding data from external systems, allowi
 	}
 
 	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource from which datasets will be imported")
-	_ = cmd.MarkFlagRequired("datasource") // todo: support import from all
-
 	cmd.Flags().StringVarP(&filter, "filter", "f", "", "Filter applied for dataset selection")
 	cmd.Flags().BoolVarP(&updateCfg, "update-checks", "u", false, "Update checks config file in place")
 

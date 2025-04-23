@@ -49,6 +49,7 @@ By automating these checks, you can proactively identify and address data qualit
 							log.Printf("Failed to run check: %s", err.Error())
 						}
 						// todo: act on check result
+						// if check.Severity {...}
 					}
 				}
 			}
@@ -57,7 +58,7 @@ By automating these checks, you can proactively identify and address data qualit
 		},
 	}
 
-	cmd.Flags().StringVarP(&checksFile, "checks", "c", "", "Validation checks")
+	cmd.Flags().StringVarP(&checksFile, "checks", "c", "", "Path to data quality checks file")
 	_ = cmd.MarkFlagRequired("checks")
 
 	return cmd

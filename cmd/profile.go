@@ -47,22 +47,21 @@ and helps in making better decisions about data processing and analysis.
 				}
 			}
 
+			// todo: introduce output format flag
 			jsonData, err := json.Marshal(profileResults)
 			if err != nil {
 				log.Fatalf("Failed to marshal metrics to JSON: %v", err)
 			}
-
-			// todo: handle empty tables
 			log.Println(string(jsonData))
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource")
+	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource in which datasets will be profiled")
 	_ = cmd.MarkFlagRequired("datasource")
 
-	cmd.Flags().StringVarP(&dataSet, "dataset", "s", "", "Dataset")
+	cmd.Flags().StringVarP(&dataSet, "dataset", "s", "", "Dataset within specified data source")
 
 	return cmd
 }

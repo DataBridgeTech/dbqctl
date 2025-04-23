@@ -103,8 +103,6 @@ func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, 
 
 	log.Printf("Calculating metrics for table: %s", dataset)
 
-	// ProfileDataSet todo: optimize/batch queries where possible
-
 	// Total Row Count
 	log.Printf("Fetching total row count...")
 	err := c.cnn.QueryRow(ctx, fmt.Sprintf("SELECT count() FROM %s", dataset)).Scan(&metrics.TotalRows)
