@@ -31,16 +31,14 @@ validations:
         description: "some raw query description here"
         severity: error
         query: |
-          select countIf(trip_distance == 0) > 0 from {{table}}
+          select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
 
 #  - dataset: pgsql-staging@[public.table_1, public.table_2]
 #    checks:
-#      - id: "row count between 0 and 100"
+#      - id: row_count > 0
 #        severity: warn
-#        type: row_count
-#        params:
-#          min: 0
-#          max: 1000
+#        type:
+
 
 # v1 supported functions:
 # ---

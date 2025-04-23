@@ -230,10 +230,10 @@ func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataset string, defaultW
 
 	query, err := generateDataCheckQuery(check, dataset, defaultWhere)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate SQL for check %s (%s): %s", check.ID, dataset, err.Error())
+		return "", fmt.Errorf("failed to generate SQL for check (%s)/(%s): %s", check.ID, dataset, err.Error())
 	}
 
-	log.Printf("Executing SQL for (%s): %s", check.ID, query)
+	log.Printf("Executing SQL for '%s': %s", check.ID, query)
 
 	startTime := time.Now()
 	rows, err := c.cnn.Query(context.Background(), query)
@@ -248,7 +248,8 @@ func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataset string, defaultW
 		if err := rows.Scan(&checkPassed); err != nil {
 			return "", fmt.Errorf("failed to scan row: %w", err)
 		}
-		log.Printf("Check passed: %t (%d ms)", checkPassed, elapsed)
+		log.Printf("Check passed: %t (in %d ms)", checkPassed, elapsed)
+		log.Printf("---")
 	}
 
 	if err = rows.Err(); err != nil {
@@ -288,7 +289,7 @@ func fetchColumns(cnn driver.Conn, ctx context.Context, databaseName string, tab
 	return cols, nil
 }
 
-func generateDataCheckQuery(check *Check, dataSet string, whereClause string) (string, error) {
+func generateDataCheckQuery(check *Check, dataset string, whereClause string) (string, error) {
 	var sqlQuery string
 
 	// handle raw_query first
@@ -296,10 +297,10 @@ func generateDataCheckQuery(check *Check, dataSet string, whereClause string) (s
 		if check.Query == "" {
 			return "", fmt.Errorf("check with id 'raw_query' requires a 'query' field")
 		}
-		sqlQuery = strings.ReplaceAll(check.Query, "{{table}}", dataSet)
 
+		sqlQuery = strings.ReplaceAll(check.Query, "{{table}}", dataset)
 		if whereClause != "" {
-			// todo: more sophisticated check might be needed
+			// todo: more sophisticated check is needed
 			if strings.Contains(strings.ToLower(sqlQuery), " where ") {
 				sqlQuery = fmt.Sprintf("%s and (%s)", sqlQuery, whereClause)
 			} else {
@@ -312,48 +313,47 @@ func generateDataCheckQuery(check *Check, dataSet string, whereClause string) (s
 
 	isAggFunction := startWithAnyOf([]string{
 		"min", "max", "avg", "stddevPop", "sum",
-	}, check.ID)
+	}, strings.ToLower(check.ID))
 
 	var checkExpression string
+	parts := strings.Fields(check.ID)
+	if len(parts) < 3 {
+		return "", fmt.Errorf("invalid format for check: %s", check.ID)
+	}
+
 	switch {
 	case strings.HasPrefix(check.ID, "row_count"):
-		// format "row_count <operator> <value>"
-		parts := strings.Fields(check.ID)
-		if len(parts) != 3 {
-			return "", fmt.Errorf("invalid format for row_count check: %s", check.ID)
-		}
-		checkExpression = fmt.Sprintf("count() %s %s", parts[1], parts[2])
+		checkExpression = strings.Replace(check.ID, "row_count", "count()", 1)
 
 	case strings.HasPrefix(check.ID, "null_count"):
-		// format "null_count(<column_name>) <operator> <value>"
-		re := regexp.MustCompile(`null_count\((.*?)\)\s*(==|!=|>|<|>=|<=)\s*(\d+)`)
+		re := regexp.MustCompile(`^null_count\((.*?)\)(.*)`)
 		matches := re.FindStringSubmatch(check.ID)
-		if len(matches) != 4 {
+		if len(matches) < 3 {
 			return "", fmt.Errorf("invalid format for null_count check: %s", check.ID)
 		}
 
 		column := matches[1]
-		operator := matches[2]
-		value := matches[3]
-		checkExpression = fmt.Sprintf("countIf(%s IS NULL) %s %s", column, operator, value)
+		remainder := matches[2]
+		checkExpression = fmt.Sprintf("countIf(isNull(%s))%s", column, remainder)
 
 	case isAggFunction:
-		// format: <func>(<column_name>) <operator> <value>
-		re := regexp.MustCompile(`^(min|max|avg|stddevPop|sum)\(([^)]+)\)\s+(==|>=|<=|>|<)\s+(.*)$`)
+		re := regexp.MustCompile(`^(min|max|avg|stddevPop|sum)\((.*?)\)(.*)`)
 		matches := re.FindStringSubmatch(check.ID)
-		if len(matches) < 4 {
+		if len(matches) < 3 {
+			fmt.Println(matches, " --- ", len(matches))
 			return "", fmt.Errorf("invalid format for aggregation function check: %s", check.ID)
 		}
-		checkExpression = fmt.Sprintf("%s", matches[0])
+
+		checkExpression = matches[0]
 
 	default:
-		// Assume the ID itself is a valid boolean expression if no specific pattern matches
-		// This is less robust but covers simple cases.
-		log.Printf("Warning: Check ID '%s' did not match known patterns. Assuming it's a direct SQL boolean expression.", check.ID)
+		// assume the ID itself is a valid boolean expression if no specific pattern matches
+		// this is less robust but covers simple cases
+		log.Printf("Warning: Check ID '%s' did not match known check patterns. Assuming it's a direct SQL boolean expression.", check.ID)
 		checkExpression = check.ID
 	}
 
-	sqlQuery = fmt.Sprintf("select %s from %s", checkExpression, dataSet)
+	sqlQuery = fmt.Sprintf("select %s from %s", checkExpression, dataset)
 	if whereClause != "" {
 		sqlQuery = fmt.Sprintf("%s where %s", sqlQuery, whereClause)
 	}

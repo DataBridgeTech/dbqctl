@@ -17,12 +17,12 @@ It is designed to be easy to use and integrate into your existing workflow.
 - [ ] complete clickhouse support
   - [x] ping
   - [x] import datasets
-  - [ ] profile dataset
+  - [x] profile dataset
     - [x] rows in table
     - [x] min, max, avg, stddev for numeric columns
     - [x] count of nulls and blanks
     - [x] most frequent value in column
-    - [ ] JSON export
+    - [x] JSON export
   - [ ] run checks
 - [ ] implement support for custom sql check 
 - [ ] implement aliases for common checks based on raw sql check
@@ -59,3 +59,7 @@ docker run -d -p 18123:8123 -p19000:9000 -e CLICKHOUSE_PASSWORD=changeme --name 
 
 # Supported Datasources
 - Clickhouse
+
+# dbq configuration
+
+# checks configuration

@@ -16,7 +16,7 @@ type DbqApp interface {
 	GetDbqConfig() *DbqConfig
 	SaveDbqConfig() error
 	FindDataSourceById(srcId string) *DataSource
-	RunCheck(check *Check, dataSource *DataSource, dataSet string, defaultWhere string) (string, error)
+	RunCheck(check *Check, dataSource *DataSource, dataset string, defaultWhere string) (string, error)
 }
 
 type DbqAppImpl struct {
@@ -94,12 +94,12 @@ func (app *DbqAppImpl) FindDataSourceById(srcId string) *DataSource {
 	return nil
 }
 
-func (app *DbqAppImpl) RunCheck(check *Check, dataSource *DataSource, dataSet string, defaultWhere string) (string, error) {
+func (app *DbqAppImpl) RunCheck(check *Check, dataSource *DataSource, dataset string, defaultWhere string) (string, error) {
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
 		return "", err
 	}
-	return cnn.RunCheck(check, dataSet, defaultWhere)
+	return cnn.RunCheck(check, dataset, defaultWhere)
 }
 
 func initConfig(dbqConfigPath string) (*DbqConfig, string) {
