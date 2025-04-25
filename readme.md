@@ -28,11 +28,11 @@ It is designed to be easy to use and integrate into your existing workflow.
 - [x] implement aliases for common checks based on raw sql check
 - [x] fix cmd descriptions
 - [x] review todos
+- [x] improve output
 - [ ] basic cross validation (dataset is defined)
 - [ ] review logs
 - [ ] review crashes (wrong arguments)
 - [ ] default values (e.g. severity)
-- [ ] improve output
 - [ ] quiet/verbose mode for logs
 - [ ] docs
 

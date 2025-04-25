@@ -4,6 +4,7 @@ import (
 	"dbq/internal"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -28,9 +29,8 @@ By automating these checks, you can proactively identify and address data qualit
 				return fmt.Errorf("error while loading checks configuration file: %w", err)
 			}
 
-			for i, rule := range checksCfg.Validations {
-				log.Printf("Running check for %s [%d/%d]", rule.Dataset, i+1, len(checksCfg.Validations))
-
+			shouldFail := false
+			for _, rule := range checksCfg.Validations {
 				dataSourceId, datasets, err := parseDatasetString(rule.Dataset)
 				if err != nil {
 					return fmt.Errorf("error while parsing dataset property: %w", err)
@@ -42,16 +42,24 @@ By automating these checks, you can proactively identify and address data qualit
 				}
 
 				for dsIdx, dataset := range datasets {
-					log.Printf("  [%d/%d] Running checks for: %s", dsIdx+1, len(datasets), dataset)
-					for _, check := range rule.Checks {
-						_, err := app.RunCheck(&check, dataSource, dataset, rule.Where)
+					log.Printf("[%d/%d] Running quality checks for: %s", dsIdx+1, len(datasets), dataset)
+					for cIdx, check := range rule.Checks {
+						pass, _, err := app.RunCheck(&check, dataSource, dataset, rule.Where)
 						if err != nil {
 							log.Printf("Failed to run check: %s", err.Error())
 						}
-						// todo: act on check result
-						// if check.Severity {...}
+
+						log.Printf("  [%d/%d] '%s': %s", cIdx+1, len(rule.Checks), check.ID, getCheckResultLabel(pass))
+						if !pass && check.Severity == "error" {
+							shouldFail = true
+						}
 					}
 				}
+			}
+
+			if shouldFail {
+				log.Printf("One or more checks with 'error' severity have failed, exiting...")
+				os.Exit(1)
 			}
 
 			return nil
@@ -97,4 +105,12 @@ func parseDatasetString(input string) (datasource string, datasets []string, err
 	}
 
 	return datasource, datasets, nil
+}
+
+func getCheckResultLabel(passed bool) string {
+	if passed {
+		return "passed"
+	} else {
+		return "failed"
+	}
 }

@@ -1,6 +1,6 @@
 version: "1"
 validations:
-  - dataset: ch-local@[nyc_taxi.trips_small, nyc_taxi.trips_big]
+  - dataset: ch-local@[nyc_taxi.trips_small]
     where: "pickup_datetime > '2014-01-01'"
     checks:
       - id: row_count > 0
@@ -26,6 +26,10 @@ validations:
       - id: sum(fare_amount) <= 10_000_000
         description: "sum of value"
         severity: error
+
+      - id: countIf(trip_id == 1) == 1
+        description: "check trip id"
+        severity: warn
 
       - id: raw_query
         description: "some raw query description here"

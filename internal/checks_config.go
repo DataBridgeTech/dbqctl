@@ -2,7 +2,6 @@ package internal
 
 import (
 	"gopkg.in/yaml.v3"
-	"log"
 	"os"
 )
 
@@ -28,14 +27,12 @@ func LoadChecksConfig(fileName string) (*ChecksConfig, error) {
 	file, err := os.Open(fileName)
 	defer file.Close()
 	if err != nil {
-		log.Printf("Error opening file: %v\n", err)
 		return nil, err
 	}
 
 	var cfg ChecksConfig
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&cfg); err != nil {
-		log.Printf("Error decoding YAML: %v\n", err)
 		return nil, err
 	}
 

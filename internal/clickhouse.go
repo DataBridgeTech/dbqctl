@@ -7,6 +7,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"log"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -101,15 +102,15 @@ func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, 
 		ColumnsMetrics: make(map[string]*ColumnMetrics),
 	}
 
-	log.Printf("Calculating metrics for table: %s", dataset)
+	slog.Debug("Calculating metrics for table:", dataset)
 
 	// Total Row Count
-	log.Printf("Fetching total row count...")
+	slog.Debug("Fetching total row count...")
 	err := c.cnn.QueryRow(ctx, fmt.Sprintf("SELECT count() FROM %s", dataset)).Scan(&metrics.TotalRows)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get total row count for %s: %w", dataset, err)
 	}
-	log.Printf("Total rows: %d", metrics.TotalRows)
+	slog.Debug("Total rows: %d", metrics.TotalRows)
 
 	// Get Column Information (Name and Type)
 	columnsToProcess, err := fetchColumns(c.cnn, ctx, databaseName, tableName)
@@ -118,7 +119,7 @@ func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, 
 	}
 
 	if len(columnsToProcess) == 0 {
-		log.Printf("Warning: No columns found for table %s. Returning basic info.", dataset)
+		slog.Warn("Warning: No columns found for table %s. Returning basic info.", dataset)
 		metrics.ProfilingDurationMs = time.Since(startTime).Milliseconds()
 		return metrics, nil
 	}
@@ -221,40 +222,39 @@ func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, 
 	return metrics, nil
 }
 
-func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataset string, defaultWhere string) (string, error) {
+func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataset string, defaultWhere string) (bool, string, error) {
 	if c.cnn == nil {
-		return "", fmt.Errorf("database connection is not initialized")
+		return false, "", fmt.Errorf("database connection is not initialized")
 	}
 
 	query, err := generateDataCheckQuery(check, dataset, defaultWhere)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate SQL for check (%s)/(%s): %s", check.ID, dataset, err.Error())
+		return false, "", fmt.Errorf("failed to generate SQL for check (%s)/(%s): %s", check.ID, dataset, err.Error())
 	}
 
-	log.Printf("Executing SQL for '%s': %s", check.ID, query)
+	// todo: debug
+	// log.Printf("Executing SQL for '%s': %s", check.ID, query)
 
-	startTime := time.Now()
+	// startTime := time.Now()
 	rows, err := c.cnn.Query(context.Background(), query)
 	if err != nil {
-		return "", fmt.Errorf("failed to query database: %w", err)
+		return false, "", fmt.Errorf("failed to query database: %w", err)
 	}
 	defer rows.Close()
-	elapsed := time.Since(startTime).Milliseconds()
+	// _ := time.Since(startTime).Milliseconds()
 
+	var checkPassed bool
 	for rows.Next() {
-		var checkPassed bool
 		if err := rows.Scan(&checkPassed); err != nil {
-			return "", fmt.Errorf("failed to scan row: %w", err)
+			return false, "", fmt.Errorf("failed to scan row: %w", err)
 		}
-		log.Printf("Check passed: %t (in %d ms)", checkPassed, elapsed)
-		log.Printf("---")
 	}
 
 	if err = rows.Err(); err != nil {
-		return "", fmt.Errorf("error occurred during row iteration: %w", err)
+		return false, "", fmt.Errorf("error occurred during row iteration: %w", err)
 	}
 
-	return "", nil
+	return checkPassed, "", nil
 }
 
 func fetchColumns(cnn driver.Conn, ctx context.Context, databaseName string, tableName string) ([]ColumnInfo, error) {
@@ -379,7 +379,7 @@ func isStringCHType(dataType string) bool {
 
 func startWithAnyOf(prefixes []string, s string) bool {
 	for _, prefix := range prefixes {
-		if strings.HasPrefix(s, prefix) {
+		if strings.HasPrefix(s, strings.ToLower(prefix)) {
 			return true
 		}
 	}

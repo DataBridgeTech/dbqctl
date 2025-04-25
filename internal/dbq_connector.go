@@ -4,7 +4,7 @@ type DbqConnector interface {
 	Ping() (string, error)
 	ImportDatasets(filter string) ([]string, error)
 	ProfileDataset(dataset string) (*TableMetrics, error)
-	RunCheck(check *Check, dataset string, defaultWhere string) (string, error)
+	RunCheck(check *Check, dataset string, defaultWhere string) (bool, string, error)
 }
 
 const (
@@ -16,12 +16,12 @@ type ColumnMetrics struct {
 	ColumnComment       string   `json:"column_comment"`
 	DataType            string   `json:"data_type"`
 	NullCount           uint64   `json:"null_count"`
-	BlankCount          *int64   `json:"blank_count,omitempty"`         // Applicable only for String types
-	MinValue            *float64 `json:"min_value,omitempty"`           // Numeric only
-	MaxValue            *float64 `json:"max_value,omitempty"`           // Numeric only
-	AvgValue            *float64 `json:"avg_value,omitempty"`           // Numeric only
-	StddevValue         *float64 `json:"stddev_value,omitempty"`        // Numeric only (Population StdDev)
-	MostFrequentValue   *string  `json:"most_frequent_value,omitempty"` // Using NullString to handle NULL as most frequent
+	BlankCount          *int64   `json:"blank_count,omitempty"`         // string only
+	MinValue            *float64 `json:"min_value,omitempty"`           // numeric only
+	MaxValue            *float64 `json:"max_value,omitempty"`           // numeric only
+	AvgValue            *float64 `json:"avg_value,omitempty"`           // numeric only
+	StddevValue         *float64 `json:"stddev_value,omitempty"`        // numeric only (Population StdDev)
+	MostFrequentValue   *string  `json:"most_frequent_value,omitempty"` // pointer to handle NULL as most frequent
 	ProfilingDurationMs int64    `json:"profiling_duration_ms"`
 }
 

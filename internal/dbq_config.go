@@ -1,11 +1,5 @@
 package internal
 
-import (
-	"gopkg.in/yaml.v3"
-	"log"
-	"os"
-)
-
 type DbqConfig struct {
 	Version     string       `yaml:"version"`
 	DataSources []DataSource `yaml:"datasources"`
@@ -24,22 +18,4 @@ type ConfigDetails struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database,omitempty"`
-}
-
-func LoadDbqSetting(fileName string) (*DbqConfig, error) {
-	file, err := os.Open(fileName)
-	defer file.Close()
-	if err != nil {
-		log.Printf("Error opening file: %v\n", err)
-		return nil, err
-	}
-
-	var settings DbqConfig
-	decoder := yaml.NewDecoder(file)
-	if err := decoder.Decode(&settings); err != nil {
-		log.Printf("Error decoding YAML: %v\n", err)
-		return nil, err
-	}
-
-	return &settings, nil
 }
