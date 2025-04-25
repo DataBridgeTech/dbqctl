@@ -29,7 +29,7 @@ By automating these checks, you can proactively identify and address data qualit
 				return fmt.Errorf("error while loading checks configuration file: %w", err)
 			}
 
-			shouldFail := false
+			exitCode := 0
 			for _, rule := range checksCfg.Validations {
 				dataSourceId, datasets, err := parseDatasetString(rule.Dataset)
 				if err != nil {
@@ -50,16 +50,16 @@ By automating these checks, you can proactively identify and address data qualit
 						}
 
 						log.Printf("  [%d/%d] '%s': %s", cIdx+1, len(rule.Checks), check.ID, getCheckResultLabel(pass))
-						if !pass && check.Severity == "error" {
-							shouldFail = true
+						if !pass && internal.IdOrDefault(string(check.OnFail), internal.OnFailActionError) == "error" {
+							exitCode = 1
 						}
 					}
 				}
 			}
 
-			if shouldFail {
-				log.Printf("One or more checks with 'error' severity have failed, exiting...")
-				os.Exit(1)
+			if exitCode != 0 {
+				log.Printf("One or more checks with on_fail = 'error' action have failed, exiting.")
+				os.Exit(exitCode)
 			}
 
 			return nil

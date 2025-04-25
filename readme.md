@@ -1,65 +1,89 @@
 # DataBridge Quality Core
 
-dbq is a data quality tool that provides a set of tools to validate and test data in your data pipeline. 
-It is designed to be easy to use and integrate into your existing workflow.
+`dbq` is a free, open-source data quality CLI checker that provides a set of tools to profile, validate and test data in your data warehouse or databases. 
+It is designed to be flexible, fast, easy to use and integrate seamlessly into your existing workflow.
 
-## Help
+## Features
+
+data profiling
+
+v1 supported checks
+---
+row_count > 10
+null_count(col) == 0
+avg(col) <= 24.2
+max(col) < 1000
+min(col) == 0
+sum(col) > 0
+stddevPop(col) between 1 and 100_000_000
+custom
+
+## Supported databases
+- [ClickHouse](https://clickhouse.com/)
+
+## Usage
+
+### Installation
+
+Download the latest binaries from [GitHub Releases](https://github.com/DataBridge-Tech/dbq/releases).
+
+### Configuration
+
+Create dbq configuration file (default lookup directory is $HOME/.dbq.yaml or ./dbq.yaml). Alternatively,
+you can specify configuration during the launch via `--config` parameter:
+
+```bash
+dbq --config /path/to/dbq.yaml import
+```
+
+```yaml
+# dbq.yaml
+version: "1"
+datasources:
+    - id: clickhouse
+      type: clickhouse
+      configuration:
+        host: 0.0.0.0:19000
+        port: 19000
+        username: default
+        password: changeme
+        database: default
+      datasets:
+        - nyc_taxi.trips_small
+```
+
+### Checks example
+
+### Commands
+
+```bash
+$ dbq help
+
+dbq is a CLI tool for profiling data and running quality checks across various data sources
+
+Usage:
+  dbq [command]
+
+Available Commands:
+  check       Runs data quality checks defined in a configuration file against a datasource
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  import      Connects to a data source and imports all available tables as datasets
+  ping        Checks if the data source is reachable
+  profile     Collects dataset`s information and generates column statistics
+  version     Prints dbq version
+
+Flags:
+      --config string   config file (default is $HOME/.dbq.yaml or ./dbq.yaml)
+  -h, --help            help for dbq
+
+Use "dbq [command] --help" for more information about a command.
+
+```
+
+### Quick start
 - dqb ping cnn-id
 - dbq import cnn-id --filter "reporting.*" --cfg checks.yaml --update-cfg
 - dbq check --cfg checks.yaml
 - dbq --config /Users/artem/code/dbq/dbq.yaml import 
 - dbq profile --datasource cnn-id --dataset table_name
-
-## 0.1
-- [x] basic structure
-- [x] define checks cfg v1
-- [x] checks cfg parser v1
-- [x] complete clickhouse support
-  - [x] ping
-  - [x] import datasets
-  - [x] profile dataset
-    - [x] rows in table
-    - [x] min, max, avg, stddev for numeric columns
-    - [x] count of nulls and blanks
-    - [x] most frequent value in column
-    - [x] JSON export
-  - [x] run checks
-- [x] implement support for custom sql check 
-- [x] implement aliases for common checks based on raw sql check
-- [x] fix cmd descriptions
-- [x] review todos
-- [x] improve output
-- [ ] basic cross validation (dataset is defined)
-- [ ] review logs
-- [ ] review crashes (wrong arguments)
-- [ ] default values (e.g. severity)
-- [ ] quiet/verbose mode for logs
-- [ ] docs
-
-## 0.x
-- config validation
-- add postgres support
-- CLI for adding more checks
-- AirFlow integration (operator)
-- output format flag
-
----
-
-## Checks config specification
-- raw_query(query = "...")
-- row_count
-- null_count(col)
-- <aggr_function> <op> <rest>
-
-### clickhouse 
-
-```bash
-docker run -d -p 18123:8123 -p19000:9000 -e CLICKHOUSE_PASSWORD=changeme --name some-clickhouse-server --ulimit nofile=262144:262144 clickhouse/clickhouse-server
-```
-
-# Supported Datasources
-- Clickhouse
-
-# dbq configuration
-
-# checks configuration

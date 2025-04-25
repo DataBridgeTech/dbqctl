@@ -13,7 +13,7 @@ func NewProfileCommand(app internal.DbqApp) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "profile",
-		Short: "Collects dataset's information and generates column statistics",
+		Short: "Collects dataset`s information and generates column statistics",
 		Long: `The 'profile' command connects to the specified data source and analyzes a given dataset. It gathers essential information about the table, such as the total number of rows. 
 Additionally, for each column within the table, it calculates and reports various statistical metrics. These metrics may include the minimum value, maximum value, the count of null or missing values, the data type, 
 and other relevant statistics depending on the data type and the capabilities of the underlying data source.

@@ -5,12 +5,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	DbqVersion = "v0.0.3"
+)
+
 func NewVersionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Prints dbq version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("DataBridge Quality Core: 0.0.1")
+			fmt.Printf("DataBridge Quality Core: %s\n", DbqVersion)
 		},
 	}
 

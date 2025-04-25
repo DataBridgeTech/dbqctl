@@ -5,54 +5,34 @@ validations:
     checks:
       - id: row_count > 0
         description: "data is present" # optional
-        severity: error # optional (error, warn, info), default "error"
+        on_fail: error # optional (error, warn), default "error"
 
       - id: row_count between 100 and 30000
         description: "data is not too big"
-        severity: error
+        on_fail: error
 
       - id: null_count(pickup_ntaname) == 0
         description: "no nulls in column" # optional
-        severity: error
+        on_fail: error
 
       - id: min(pickup_datetime) < now() - interval 3 day
         description: "min check"
-        severity: error
+        on_fail: error
 
       - id: stddevPop(trip_distance) < 100_000
         description: "check stddev value"
-        severity: error
+        on_fail: error
 
       - id: sum(fare_amount) <= 10_000_000
         description: "sum of value"
-        severity: error
+        on_fail: error
 
       - id: countIf(trip_id == 1) == 1
         description: "check trip id"
-        severity: warn
+        on_fail: warn
 
       - id: raw_query
         description: "some raw query description here"
-        severity: error
+        on_fail: error
         query: |
           select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
-
-#  - dataset: pgsql-staging@[public.table_1, public.table_2]
-#    checks:
-#      - id: row_count > 0
-#        severity: warn
-#        type:
-
-
-# v1 supported functions:
-# ---
-# row_count > 10
-# null_count(col) == 0
-# avg(col) <= 24.2
-# max(col) < 1000
-# min(col) == 0
-# sum(col) > 0
-# stddev(col) between 1 and 100_000_000
-# custom
-
-# AI anomaly detection

@@ -5,6 +5,13 @@ import (
 	"os"
 )
 
+type OnFailAction string
+
+const (
+	OnFailActionError   = "error"
+	OnFailActionWarning = "warn"
+)
+
 type ChecksConfig struct {
 	Version     string       `yaml:"version"`
 	Validations []Validation `yaml:"validations"`
@@ -17,10 +24,10 @@ type Validation struct {
 }
 
 type Check struct {
-	ID          string `yaml:"id"`
-	Description string `yaml:"description,omitempty"` // Optional
-	Severity    string `yaml:"severity,omitempty"`    // Optional (error, warn, info)
-	Query       string `yaml:"query,omitempty"`       // Optional raw query
+	ID          string       `yaml:"id"`
+	Description string       `yaml:"description,omitempty"` // optional
+	OnFail      OnFailAction `yaml:"on_fail,omitempty"`     // optional (error, warn)
+	Query       string       `yaml:"query,omitempty"`       // optional raw query
 }
 
 func LoadChecksConfig(fileName string) (*ChecksConfig, error) {
