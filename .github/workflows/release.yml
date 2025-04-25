@@ -22,12 +22,12 @@ jobs:
           - goos: linux
             goarch: amd64
             asset_suffix: linux-amd64
-          - goos: linux
-            goarch: arm64
-            asset_suffix: linux-arm64
-          - goos: darwin # macOS
-            goarch: amd64
-            asset_suffix: darwin-amd64
+#          - goos: linux
+#            goarch: arm64
+#            asset_suffix: linux-arm64
+#          - goos: darwin # macOS
+#            goarch: amd64
+#            asset_suffix: darwin-amd64
           - goos: darwin # macOS
             goarch: arm64
             asset_suffix: darwin-arm64
