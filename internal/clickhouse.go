@@ -8,6 +8,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"log"
 	"log/slog"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -84,7 +85,7 @@ func (c *ClickhouseDbqConnector) ImportDatasets(filter string) ([]string, error)
 	return datasets, nil
 }
 
-func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, error) {
+func (c *ClickhouseDbqConnector) ProfileDataset(dataset string, sample bool) (*TableMetrics, error) {
 	startTime := time.Now()
 	ctx := context.Background()
 
@@ -112,6 +113,46 @@ func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, 
 	}
 	slog.Debug("Total rows: %d", metrics.TotalRows)
 
+	// sample data if enabled
+	if sample {
+		sampleQuery := fmt.Sprintf("select * from %s.%s order by rand() limit 100", databaseName, tableName)
+
+		toCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		rows, err := c.cnn.Query(toCtx, sampleQuery)
+		if err != nil {
+			log.Printf("Warning: Failed to sample data %s: %v", err)
+		}
+		defer rows.Close()
+
+		var allRows []map[string]interface{}
+		for rows.Next() {
+			scanArgs := make([]interface{}, len(rows.Columns()))
+			for i, colType := range rows.ColumnTypes() {
+				scanType := colType.ScanType()
+				valuePtr := reflect.New(scanType).Interface()
+				scanArgs[i] = valuePtr
+			}
+
+			err = rows.Scan(scanArgs...)
+			if err != nil {
+				log.Printf("Warning: Failed to scan row: %v", err)
+				continue
+			}
+
+			rowData := make(map[string]interface{})
+			for i, colName := range rows.Columns() {
+				scannedValue := reflect.ValueOf(scanArgs[i]).Elem().Interface()
+				rowData[colName] = scannedValue
+			}
+
+			allRows = append(allRows, rowData)
+		}
+
+		metrics.RowsSample = allRows
+	}
+
 	// Get Column Information (Name and Type)
 	columnsToProcess, err := fetchColumns(c.cnn, ctx, databaseName, tableName)
 	if err != nil {
@@ -131,9 +172,10 @@ func (c *ClickhouseDbqConnector) ProfileDataset(dataset string) (*TableMetrics, 
 		colStartTime := time.Now()
 		log.Printf("Processing column: %s (Type: %s)", col.Name, col.Type)
 		colMetrics := &ColumnMetrics{
-			ColumnName:    col.Name,
-			DataType:      col.Type,
-			ColumnComment: col.Comment,
+			ColumnName:     col.Name,
+			DataType:       col.Type,
+			ColumnComment:  col.Comment,
+			ColumnPosition: col.Position,
 		}
 
 		// Null Count (all types)
@@ -259,7 +301,7 @@ func (c *ClickhouseDbqConnector) RunCheck(check *Check, dataset string, defaultW
 
 func fetchColumns(cnn driver.Conn, ctx context.Context, databaseName string, tableName string) ([]ColumnInfo, error) {
 	columnQuery := `
-        SELECT name, type, comment
+        SELECT name, type, comment, position
         FROM system.columns
         WHERE database = ? AND table = ?
         ORDER BY position`
@@ -273,10 +315,11 @@ func fetchColumns(cnn driver.Conn, ctx context.Context, databaseName string, tab
 	var cols []ColumnInfo
 	for rows.Next() {
 		var colName, colType, comment string
-		if err := rows.Scan(&colName, &colType, &comment); err != nil {
+		var pos uint64
+		if err := rows.Scan(&colName, &colType, &comment, &pos); err != nil {
 			return nil, fmt.Errorf("failed to scan column info: %w", err)
 		}
-		cols = append(cols, ColumnInfo{Name: colName, Type: colType, Comment: comment})
+		cols = append(cols, ColumnInfo{Name: colName, Type: colType, Comment: comment, Position: uint(pos)})
 	}
 
 	if err = rows.Err(); err != nil {

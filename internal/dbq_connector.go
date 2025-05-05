@@ -3,7 +3,7 @@ package internal
 type DbqConnector interface {
 	Ping() (string, error)
 	ImportDatasets(filter string) ([]string, error)
-	ProfileDataset(dataset string) (*TableMetrics, error)
+	ProfileDataset(dataset string, sample bool) (*TableMetrics, error)
 	RunCheck(check *Check, dataset string, defaultWhere string) (bool, string, error)
 }
 
@@ -12,8 +12,9 @@ const (
 )
 
 type ColumnMetrics struct {
-	ColumnName          string   `json:"column_name"`
-	ColumnComment       string   `json:"column_comment"`
+	ColumnName          string   `json:"col_name"`
+	ColumnComment       string   `json:"col_comment"`
+	ColumnPosition      uint     `json:"col_position"`
 	DataType            string   `json:"data_type"`
 	NullCount           uint64   `json:"null_count"`
 	BlankCount          *int64   `json:"blank_count,omitempty"`         // string only
@@ -31,13 +32,15 @@ type TableMetrics struct {
 	DatabaseName        string                    `json:"database_name"`
 	TotalRows           uint64                    `json:"total_rows"`
 	ColumnsMetrics      map[string]*ColumnMetrics `json:"columns_metrics"`
+	RowsSample          []map[string]interface{}  `json:"rows_sample"`
 	ProfilingDurationMs int64                     `json:"profiling_duration_ms"`
 }
 
 type ColumnInfo struct {
-	Name    string
-	Type    string
-	Comment string
+	Name     string
+	Type     string
+	Comment  string
+	Position uint
 }
 
 type ProfileResultOutput struct {

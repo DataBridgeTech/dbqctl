@@ -10,6 +10,7 @@ import (
 func NewProfileCommand(app internal.DbqApp) *cobra.Command {
 	var dataSource string
 	var dataSet string
+	var sample bool
 
 	cmd := &cobra.Command{
 		Use:   "profile",
@@ -39,7 +40,7 @@ and helps in making better decisions about data processing and analysis.
 			}
 
 			for _, curDataSet := range dataSetsToProfile {
-				metrics, err := app.ProfileDataset(dataSource, curDataSet)
+				metrics, err := app.ProfileDataset(dataSource, curDataSet, sample)
 				if err != nil {
 					log.Printf("Failed to profile %s: %s\n", curDataSet, err)
 				} else {
@@ -62,6 +63,7 @@ and helps in making better decisions about data processing and analysis.
 	_ = cmd.MarkFlagRequired("datasource")
 
 	cmd.Flags().StringVarP(&dataSet, "dataset", "s", "", "Dataset within specified data source")
+	cmd.Flags().BoolVarP(&sample, "sample", "m", false, "Include data samples in profiling report")
 
 	return cmd
 }

@@ -50,7 +50,7 @@ By automating these checks, you can proactively identify and address data qualit
 						}
 
 						log.Printf("  [%d/%d] '%s': %s", cIdx+1, len(rule.Checks), check.ID, getCheckResultLabel(pass))
-						if !pass && internal.IdOrDefault(string(check.OnFail), internal.OnFailActionError) == "error" {
+						if !pass && internal.IdOrDefault(string(check.OnFail), internal.OnFailActionError) == internal.OnFailActionError {
 							exitCode = 1
 						}
 					}

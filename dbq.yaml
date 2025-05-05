@@ -1,6 +1,6 @@
 version: "1"
 datasources:
-    - id: ch-local
+    - id: ch
       type: clickhouse
       configuration:
         host: 0.0.0.0:19000
@@ -9,14 +9,4 @@ datasources:
         password: changeme
         database: default
       datasets:
-        - nyc_taxi.trips_big
         - nyc_taxi.trips_small
-    - id: pgsql
-      type: postgres
-      configuration:
-        host: 127.0.0.1
-        port: 9004
-        username: simple
-        password: simple_pass
-      datasets:
-        - public.table_1

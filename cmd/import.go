@@ -58,7 +58,7 @@ This command is useful for quickly onboarding data from external systems, allowi
 
 	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource from which datasets will be imported")
 	cmd.Flags().StringVarP(&filter, "filter", "f", "", "Filter applied for dataset selection")
-	cmd.Flags().BoolVarP(&updateCfg, "update-checks", "u", false, "Update checks config file in place")
+	cmd.Flags().BoolVarP(&updateCfg, "update-config", "u", false, "Update dbq config file in place")
 
 	return cmd
 }

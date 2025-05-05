@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
+	"log/slog"
 	"os"
 	"strings"
 )
@@ -12,16 +13,18 @@ import (
 type DbqApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
-	ProfileDataset(srcId string, dataset string) (*TableMetrics, error)
+	ProfileDataset(srcId string, dataset string, sample bool) (*TableMetrics, error)
 	GetDbqConfig() *DbqConfig
 	SaveDbqConfig() error
 	FindDataSourceById(srcId string) *DataSource
 	RunCheck(check *Check, dataSource *DataSource, dataset string, defaultWhere string) (bool, string, error)
+	SetLogLevel(level slog.Level)
 }
 
 type DbqAppImpl struct {
 	dbqConfigPath string
 	dbqConfig     *DbqConfig
+	logLevel      slog.Level
 }
 
 func NewDbqApp(dbqConfigPath string) DbqApp {
@@ -29,6 +32,7 @@ func NewDbqApp(dbqConfigPath string) DbqApp {
 	return &DbqAppImpl{
 		dbqConfigPath: dbqConfigUsedPath,
 		dbqConfig:     dbqConfig,
+		logLevel:      slog.LevelError,
 	}
 }
 
@@ -58,13 +62,13 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 	return cnn.ImportDatasets(filter)
 }
 
-func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string) (*TableMetrics, error) {
+func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool) (*TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
 		return nil, err
 	}
-	return cnn.ProfileDataset(dataset)
+	return cnn.ProfileDataset(dataset, sample)
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *DbqConfig {
@@ -100,6 +104,10 @@ func (app *DbqAppImpl) RunCheck(check *Check, dataSource *DataSource, dataset st
 		return false, "", err
 	}
 	return cnn.RunCheck(check, dataset, defaultWhere)
+}
+
+func (app *DbqAppImpl) SetLogLevel(logLevel slog.Level) {
+	app.logLevel = logLevel
 }
 
 func initConfig(dbqConfigPath string) (*DbqConfig, string) {

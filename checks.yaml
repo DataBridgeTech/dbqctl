@@ -1,6 +1,6 @@
 version: "1"
 validations:
-  - dataset: ch-local@[nyc_taxi.trips_small]
+  - dataset: ch@[nyc_taxi.trips_small]
     where: "pickup_datetime > '2014-01-01'"
     checks:
       - id: row_count > 0

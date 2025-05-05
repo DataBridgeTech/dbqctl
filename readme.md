@@ -54,6 +54,11 @@ datasources:
 
 ### Checks example
 
+```yaml
+# checks.yaml
+
+```
+
 ### Commands
 
 ```bash
@@ -76,9 +81,9 @@ Available Commands:
 Flags:
       --config string   config file (default is $HOME/.dbq.yaml or ./dbq.yaml)
   -h, --help            help for dbq
+  -v, --verbose         Enables verbose logging
 
 Use "dbq [command] --help" for more information about a command.
-
 ```
 
 ### Quick start
