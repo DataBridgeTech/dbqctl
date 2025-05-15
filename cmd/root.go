@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"dbq/internal"
 	"log/slog"
 	"os"
 
+	"github.com/DataBridge-Tech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 

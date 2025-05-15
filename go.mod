@@ -1,4 +1,4 @@
-module dbq
+module github.com/DataBridge-Tech/dbq
 
 go 1.24.2
 
@@ -7,7 +7,10 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	gopkg.in/yaml.v3 v3.0.1
+	github.com/DataBridge-Tech/dbq-core v0.0.1
 )
+
+// replace github.com/DataBridge-Tech/dbq-core => ../dbq-core
 
 require (
 	github.com/ClickHouse/ch-go v0.65.1 // indirect

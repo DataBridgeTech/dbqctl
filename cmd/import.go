@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"dbq/internal"
 	"log"
 
+	"github.com/DataBridge-Tech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 

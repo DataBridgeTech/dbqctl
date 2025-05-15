@@ -4,11 +4,12 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package main
 
 import (
-	"dbq/cmd"
-	"dbq/internal"
+	"os"
+
+	"github.com/DataBridge-Tech/dbq/cmd"
+	"github.com/DataBridge-Tech/dbq/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
 )
 
 func main() {

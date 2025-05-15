@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"dbq/internal"
 	"encoding/json"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/spf13/cobra"
 )
 
 func NewProfileCommand(app internal.DbqApp) *cobra.Command {

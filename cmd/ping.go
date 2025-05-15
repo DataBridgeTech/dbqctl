@@ -1,9 +1,10 @@
 package cmd
 
 import (
-	"dbq/internal"
-	"github.com/spf13/cobra"
 	"log"
+
+	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/spf13/cobra"
 )
 
 func NewPingCommand(app internal.DbqApp) *cobra.Command {
