@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/DataBridgeTech/dbqcore"
 	"log"
 
-	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/DataBridgeTech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 
-func NewProfileCommand(app internal.DbqApp) *cobra.Command {
+func NewProfileCommand(app internal.DbqCliApp) *cobra.Command {
 	var dataSource string
 	var dataSet string
 	var sample bool
@@ -36,8 +37,8 @@ and helps in making better decisions about data processing and analysis.
 				}
 			}
 
-			profileResults := &internal.ProfileResultOutput{
-				Profiles: make(map[string]*internal.TableMetrics),
+			profileResults := &dbqcore.ProfileResultOutput{
+				Profiles: make(map[string]*dbqcore.TableMetrics),
 			}
 
 			for _, curDataSet := range dataSetsToProfile {

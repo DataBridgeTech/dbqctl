@@ -3,11 +3,11 @@ package cmd
 import (
 	"log"
 
-	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/DataBridgeTech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 
-func NewImportCommand(app internal.DbqApp) *cobra.Command {
+func NewImportCommand(app internal.DbqCliApp) *cobra.Command {
 	var dataSource string
 	var filter string
 	var updateCfg bool

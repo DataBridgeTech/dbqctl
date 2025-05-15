@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	dbqcore "github.com/DataBridge-Tech/dbq-core"
+	"github.com/DataBridgeTech/dbqcore"
 	"github.com/spf13/cobra"
 )
 

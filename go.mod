@@ -1,16 +1,16 @@
-module github.com/DataBridge-Tech/dbq
+module github.com/DataBridgeTech/dbq
 
 go 1.24.2
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.34.0
+	github.com/DataBridgeTech/dbqcore v0.0.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	gopkg.in/yaml.v3 v3.0.1
-	github.com/DataBridge-Tech/dbq-core v0.0.1
 )
 
-// replace github.com/DataBridge-Tech/dbq-core => ../dbq-core
+//replace github.com/DataBridgeTech/dbqcore => ../dbqcore
 
 require (
 	github.com/ClickHouse/ch-go v0.65.1 // indirect
@@ -21,7 +21,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
@@ -36,6 +36,6 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 )

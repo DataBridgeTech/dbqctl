@@ -25,7 +25,7 @@ custom
 
 ### Installation
 
-Download the latest binaries from [GitHub Releases](https://github.com/DataBridge-Tech/dbq/releases).
+Download the latest binaries from [GitHub Releases](https://github.com/DataBridgeTech/dbq/releases).
 
 ### Configuration
 

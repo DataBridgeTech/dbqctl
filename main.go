@@ -6,8 +6,8 @@ package main
 import (
 	"os"
 
-	"github.com/DataBridge-Tech/dbq/cmd"
-	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/DataBridgeTech/dbq/cmd"
+	"github.com/DataBridgeTech/dbq/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -21,7 +21,7 @@ func main() {
 		cobra.CheckErr(err)
 	}
 
-	app := internal.NewDbqApp(*dbqConfigFile)
+	app := internal.NewDbqCliApp(*dbqConfigFile)
 
 	cmd.AddCommands(app)
 	cmd.Execute()

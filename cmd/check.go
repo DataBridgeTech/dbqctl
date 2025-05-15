@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/DataBridgeTech/dbqcore"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/DataBridgeTech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 
-func NewCheckCommand(app internal.DbqApp) *cobra.Command {
+func NewCheckCommand(app internal.DbqCliApp) *cobra.Command {
 	var checksFile string
 
 	cmd := &cobra.Command{
@@ -24,7 +25,7 @@ By automating these checks, you can proactively identify and address data qualit
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Printf("Reading checks configuration file: %s \n", checksFile)
 
-			checksCfg, err := internal.LoadChecksConfig(checksFile)
+			checksCfg, err := dbqcore.LoadChecksConfig(checksFile)
 			if err != nil {
 				return fmt.Errorf("error while loading checks configuration file: %w", err)
 			}
@@ -50,7 +51,7 @@ By automating these checks, you can proactively identify and address data qualit
 						}
 
 						log.Printf("  [%d/%d] '%s': %s", cIdx+1, len(rule.Checks), check.ID, getCheckResultLabel(pass))
-						if !pass && internal.IdOrDefault(string(check.OnFail), internal.OnFailActionError) == internal.OnFailActionError {
+						if !pass && internal.IdOrDefault(string(check.OnFail), dbqcore.OnFailActionError) == dbqcore.OnFailActionError {
 							exitCode = 1
 						}
 					}

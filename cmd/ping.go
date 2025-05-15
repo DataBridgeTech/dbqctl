@@ -3,11 +3,11 @@ package cmd
 import (
 	"log"
 
-	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/DataBridgeTech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 
-func NewPingCommand(app internal.DbqApp) *cobra.Command {
+func NewPingCommand(app internal.DbqCliApp) *cobra.Command {
 	var dataSource string
 
 	cmd := &cobra.Command{

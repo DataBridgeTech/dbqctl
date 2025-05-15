@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/DataBridge-Tech/dbq/internal"
+	"github.com/DataBridgeTech/dbq/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ func Execute() {
 	}
 }
 
-func AddCommands(app internal.DbqApp) {
+func AddCommands(app internal.DbqCliApp) {
 	rootCmd.AddCommand(NewPingCommand(app))
 	rootCmd.AddCommand(NewImportCommand(app))
 	rootCmd.AddCommand(NewCheckCommand(app))

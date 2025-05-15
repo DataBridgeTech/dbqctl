@@ -6,29 +6,31 @@ import (
 	"os"
 	"strings"
 
+	"github.com/DataBridgeTech/dbqcore"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
-type DbqApp interface {
+type DbqCliApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
-	ProfileDataset(srcId string, dataset string, sample bool) (*TableMetrics, error)
-	GetDbqConfig() *DbqConfig
+	ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error)
+	GetDbqConfig() *dbqcore.DbqConfig
 	SaveDbqConfig() error
-	FindDataSourceById(srcId string) *DataSource
-	RunCheck(check *Check, dataSource *DataSource, dataset string, defaultWhere string) (bool, string, error)
+	FindDataSourceById(srcId string) *dbqcore.DataSource
+	RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
 	SetLogLevel(level slog.Level)
 }
 
 type DbqAppImpl struct {
 	dbqConfigPath string
-	dbqConfig     *DbqConfig
+	dbqConfig     *dbqcore.DbqConfig
 	logLevel      slog.Level
 }
 
-func NewDbqApp(dbqConfigPath string) DbqApp {
+func NewDbqCliApp(dbqConfigPath string) DbqCliApp {
 	dbqConfig, dbqConfigUsedPath := initConfig(dbqConfigPath)
 	return &DbqAppImpl{
 		dbqConfigPath: dbqConfigUsedPath,
@@ -63,7 +65,7 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 	return cnn.ImportDatasets(filter)
 }
 
-func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool) (*TableMetrics, error) {
+func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
@@ -72,7 +74,7 @@ func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool)
 	return cnn.ProfileDataset(dataset, sample)
 }
 
-func (app *DbqAppImpl) GetDbqConfig() *DbqConfig {
+func (app *DbqAppImpl) GetDbqConfig() *dbqcore.DbqConfig {
 	return app.dbqConfig
 }
 
@@ -90,7 +92,7 @@ func (app *DbqAppImpl) SaveDbqConfig() error {
 	return nil
 }
 
-func (app *DbqAppImpl) FindDataSourceById(srcId string) *DataSource {
+func (app *DbqAppImpl) FindDataSourceById(srcId string) *dbqcore.DataSource {
 	for i := range app.dbqConfig.DataSources {
 		if app.dbqConfig.DataSources[i].ID == srcId {
 			return &app.dbqConfig.DataSources[i]
@@ -99,7 +101,7 @@ func (app *DbqAppImpl) FindDataSourceById(srcId string) *DataSource {
 	return nil
 }
 
-func (app *DbqAppImpl) RunCheck(check *Check, dataSource *DataSource, dataset string, defaultWhere string) (bool, string, error) {
+func (app *DbqAppImpl) RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error) {
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
 		return false, "", err
@@ -111,7 +113,7 @@ func (app *DbqAppImpl) SetLogLevel(logLevel slog.Level) {
 	app.logLevel = logLevel
 }
 
-func initConfig(dbqConfigPath string) (*DbqConfig, string) {
+func initConfig(dbqConfigPath string) (*dbqcore.DbqConfig, string) {
 	v := viper.New()
 
 	if dbqConfigPath != "" {
@@ -129,7 +131,7 @@ func initConfig(dbqConfigPath string) (*DbqConfig, string) {
 		cobra.CheckErr(err)
 	}
 
-	var dbqConfig DbqConfig
+	var dbqConfig dbqcore.DbqConfig
 	if err := v.Unmarshal(&dbqConfig); err != nil {
 		cobra.CheckErr(err)
 	}
@@ -137,11 +139,11 @@ func initConfig(dbqConfigPath string) (*DbqConfig, string) {
 	return &dbqConfig, v.ConfigFileUsed()
 }
 
-func getDbqConnector(ds DataSource) (DbqConnector, error) {
+func getDbqConnector(ds dbqcore.DataSource) (dbqcore.DbqConnector, error) {
 	dsType := strings.ToLower(ds.Type)
 	switch dsType {
 	case "clickhouse":
-		return NewClickhouseDbqConnector(ds)
+		return dbqcore.NewClickhouseDbqConnector(ds)
 	default:
 		return nil, fmt.Errorf("data source type '%s' is not supported", dsType)
 	}
