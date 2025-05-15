@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	DbqVersion = "v0.0.3"
+	DbqVersion = "v0.0.4"
 )
 
 func NewVersionCommand() *cobra.Command {
