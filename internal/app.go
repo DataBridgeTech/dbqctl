@@ -1,3 +1,17 @@
+// Copyright 2025 The DBQ Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package internal
 
 import (
@@ -17,11 +31,11 @@ type DbqCliApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
 	ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error)
+	RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
 	GetDbqConfig() *dbqcore.DbqConfig
 	SaveDbqConfig() error
-	FindDataSourceById(srcId string) *dbqcore.DataSource
-	RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
 	SetLogLevel(level slog.Level)
+	FindDataSourceById(srcId string) *dbqcore.DataSource
 }
 
 type DbqAppImpl struct {
@@ -57,6 +71,7 @@ func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 
 func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
+
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
 		return []string{}, err
@@ -67,10 +82,12 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 
 func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
+
 	cnn, err := getDbqConnector(*dataSource)
 	if err != nil {
 		return nil, err
 	}
+
 	return cnn.ProfileDataset(dataset, sample)
 }
 

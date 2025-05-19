@@ -1,6 +1,6 @@
-# DataBridge Quality Core
+# DataBridge Quality Control
 
-`dbq` is a free, open-source data quality CLI checker that provides a set of tools to profile, validate and test data in your data warehouse or databases. 
+`dbqctl` is a free, open-source data quality CLI checker that provides a set of tools to profile, validate and test data in your data warehouse or databases. 
 It is designed to be flexible, fast, easy to use and integrate seamlessly into your existing workflow.
 
 ## Features

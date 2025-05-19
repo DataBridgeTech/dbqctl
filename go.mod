@@ -1,11 +1,11 @@
-module github.com/DataBridgeTech/dbq
+module github.com/DataBridgeTech/dbqctl
 
 go 1.24.2
 
 require (
-	github.com/ClickHouse/clickhouse-go/v2 v2.34.0
 	github.com/DataBridgeTech/dbqcore v0.0.1
 	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -14,6 +14,7 @@ require (
 
 require (
 	github.com/ClickHouse/ch-go v0.65.1 // indirect
+	github.com/ClickHouse/clickhouse-go/v2 v2.34.0 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
@@ -31,7 +32,6 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect

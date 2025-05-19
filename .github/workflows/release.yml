@@ -1,4 +1,4 @@
-name: Release dbq
+name: Release dbqctl
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'v*.*.*'
 
 env:
-  APP_NAME: dbq
+  APP_NAME: dbqctl
   MAIN_PACKAGE_PATH: .
 
 permissions:
