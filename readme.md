@@ -14,6 +14,7 @@ It is designed to be flexible, fast, easy to use and integrate seamlessly into y
   - Min/Max/Avg Values
   - Standard Deviation
   - Most Frequent Values
+  - Rows Sampling
 - Data quality checks with built-in support for:
   - Row Count
   - Null Count
