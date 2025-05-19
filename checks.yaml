@@ -1,38 +1,34 @@
 version: "1"
 validations:
+  # https://clickhouse.com/docs/getting-started/example-datasets/nyc-taxi
   - dataset: ch@[nyc_taxi.trips_small]
+    # common pre-filter for every check, e.g. to run daily check only for yesterday
     where: "pickup_datetime > '2014-01-01'"
     checks:
       - id: row_count > 0
-        description: "data is present" # optional
+        description: "data should be present" # optional
         on_fail: error # optional (error, warn), default "error"
 
       - id: row_count between 100 and 30000
-        description: "data is not too big"
-        on_fail: error
+        description: "expected rows count"
+        on_fail: warn
 
       - id: null_count(pickup_ntaname) == 0
-        description: "no nulls in column" # optional
-        on_fail: error
+        description: "no nulls are allowed in column: pickup_ntaname"
 
       - id: min(pickup_datetime) < now() - interval 3 day
-        description: "min check"
-        on_fail: error
+        description: "min(pickup_datetime) should not be earlier than 3 days"
 
       - id: stddevPop(trip_distance) < 100_000
         description: "check stddev value"
-        on_fail: error
 
       - id: sum(fare_amount) <= 10_000_000
         description: "sum of value"
-        on_fail: error
 
       - id: countIf(trip_id == 1) == 1
         description: "check trip id"
-        on_fail: warn
 
       - id: raw_query
-        description: "some raw query description here"
-        on_fail: error
+        description: "raw query quality test"
         query: |
           select countIf(trip_distance == 0) > 0 from {{table}} where 1=1

@@ -28,7 +28,7 @@ const (
 func NewVersionCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Prints dbq version",
+		Short: "Prints dbqctl and core lib version",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("DataBridge Quality CLI: %s\n", DbqCtlVersion)
 			fmt.Printf("DataBridge dbqcore lib version: %s\n", dbqcore.GetDbqCoreLibVersion())

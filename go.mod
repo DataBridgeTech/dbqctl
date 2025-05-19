@@ -10,7 +10,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-//replace github.com/DataBridgeTech/dbqcore => ../dbqcore
+replace github.com/DataBridgeTech/dbqcore => ../dbqcore
 
 require (
 	github.com/ClickHouse/ch-go v0.65.1 // indirect

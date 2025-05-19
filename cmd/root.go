@@ -25,8 +25,8 @@ import (
 var verbose bool
 
 var rootCmd = &cobra.Command{
-	Use:   "dbq",
-	Short: "dbq is a CLI tool for profiling data and running quality checks across various data sources",
+	Use:   "dbqctl",
+	Short: "dbqctl is a CLI tool for profiling data and running quality checks across various data sources",
 }
 
 func Execute() {

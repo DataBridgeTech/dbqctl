@@ -3,20 +3,22 @@
 `dbqctl` is a free, open-source data quality CLI checker that provides a set of tools to profile, validate and test data in your data warehouse or databases. 
 It is designed to be flexible, fast, easy to use and integrate seamlessly into your existing workflow.
 
+---
+
 ## Features
 
-data profiling
-
-v1 supported checks
----
-row_count > 10
-null_count(col) == 0
-avg(col) <= 24.2
-max(col) < 1000
-min(col) == 0
-sum(col) > 0
-stddevPop(col) between 1 and 100_000_000
-custom
+- Effortless dataset import: pull in datasets (e.g. tables) from your chosen DWH with filters
+- Comprehensive data profiling: gain instant insights into your data with automatic profiling, including:
+  - Data Types
+  - Null & Blank Counts
+  - Min/Max/Avg Values
+  - Standard Deviation
+  - Most Frequent Values
+- Data quality checks with built-in support for:
+  - Row Count
+  - Null Count
+  - Average, Max, Min, Sum
+- Flexible custom SQL checks: you can define and run your own SQL-based quality rules to meet unique business requirements.
 
 ## Supported databases
 - [ClickHouse](https://clickhouse.com/)
@@ -25,11 +27,11 @@ custom
 
 ### Installation
 
-Download the latest binaries from [GitHub Releases](https://github.com/DataBridgeTech/dbq/releases).
+Download the latest binaries from [GitHub Releases](https://github.com/DataBridgeTech/dbqctl/releases).
 
 ### Configuration
 
-Create dbq configuration file (default lookup directory is $HOME/.dbq.yaml or ./dbq.yaml). Alternatively,
+Create `dbqctl` configuration file (default lookup directory is $HOME/.dbq.yaml or ./dbq.yaml). Alternatively,
 you can specify configuration during the launch via `--config` parameter:
 
 ```bash
@@ -56,18 +58,51 @@ datasources:
 
 ```yaml
 # checks.yaml
+version: "1"
+validations:
+  # https://clickhouse.com/docs/getting-started/example-datasets/nyc-taxi
+  - dataset: ch@[nyc_taxi.trips_small]
+    # common pre-filter for every check, e.g. to run daily check only for yesterday
+    where: "pickup_datetime > '2014-01-01'"
+    checks:
+      - id: row_count > 0
+        description: "data should be present" # optional
+        on_fail: error # optional (error, warn), default "error"
 
+      - id: row_count between 100 and 30000
+        description: "expected rows count"
+        on_fail: warn
+
+      - id: null_count(pickup_ntaname) == 0
+        description: "no nulls are allowed in column: pickup_ntaname"
+
+      - id: min(pickup_datetime) < now() - interval 3 day
+        description: "min(pickup_datetime) should not be earlier than 3 days"
+
+      - id: stddevPop(trip_distance) < 100_000
+        description: "check stddev value"
+
+      - id: sum(fare_amount) <= 10_000_000
+        description: "sum of value"
+
+      - id: countIf(trip_id == 1) == 1
+        description: "check trip id"
+
+      - id: raw_query
+        description: "raw query quality test"
+        query: |
+          select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
 ```
 
 ### Commands
 
 ```bash
-$ dbq help
+$ dbqctl help
 
-dbq is a CLI tool for profiling data and running quality checks across various data sources
+dbqctl is a CLI tool for profiling data and running quality checks across various data sources
 
 Usage:
-  dbq [command]
+  dbqctl [command]
 
 Available Commands:
   check       Runs data quality checks defined in a configuration file against a datasource
@@ -76,19 +111,30 @@ Available Commands:
   import      Connects to a data source and imports all available tables as datasets
   ping        Checks if the data source is reachable
   profile     Collects dataset`s information and generates column statistics
-  version     Prints dbq version
+  version     Prints dbqctl and core lib version
 
 Flags:
       --config string   config file (default is $HOME/.dbq.yaml or ./dbq.yaml)
-  -h, --help            help for dbq
+  -h, --help            help for dbqctl
   -v, --verbose         Enables verbose logging
 
-Use "dbq [command] --help" for more information about a command.
+Use "dbqctl [command] --help" for more information about a command.
 ```
 
-### Quick start
-- dqb ping cnn-id
-- dbq import cnn-id --filter "reporting.*" --cfg checks.yaml --update-cfg
-- dbq check --cfg checks.yaml
-- dbq --config /Users/artem/code/dbq/dbq.yaml import 
-- dbq profile --datasource cnn-id --dataset table_name
+### Quick usage examples
+```bash
+# check connection to datasource
+$ dqbctl ping cnn-id
+
+# automatically import datasets from datasource with applied filter and in-place update config file 
+$ dbqctl import cnn-id --filter "reporting.*" --cfg checks.yaml --update-cfg
+
+# run checks from checks.yaml file
+$ dbqctl check --cfg checks.yaml
+
+# override default dbqctl config file
+$ dbqctl --config /Users/artem/code/dbq/dbq.yaml import
+
+# run dataset profile to collect general stats
+$ dbqctl profile --datasource cnn-id --dataset table_name
+```
