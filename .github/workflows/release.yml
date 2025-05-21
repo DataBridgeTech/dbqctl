@@ -44,7 +44,7 @@ jobs:
           go-version: '1.24.2'
 
       - name: Get dependencies
-        run: go mod download
+        run: go mod tidy -e
 
       - name: Build Go application
         env:
