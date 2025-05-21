@@ -52,7 +52,7 @@ This command is useful for quickly onboarding data from external systems, allowi
 
 				fmt.Printf("found %d datasets in %s to import: %v\n", len(datasets), curDataSource, datasets)
 
-				ds := app.FindDataSourceById(dataSource)
+				ds := app.FindDataSourceById(curDataSource)
 				if ds != nil {
 					ds.Datasets = datasets
 				}
@@ -63,7 +63,7 @@ This command is useful for quickly onboarding data from external systems, allowi
 				if err != nil {
 					return err
 				}
-				fmt.Println("dbq config has been updated")
+				fmt.Println("dbqctl config has been updated")
 			}
 
 			return nil

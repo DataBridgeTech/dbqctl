@@ -55,6 +55,7 @@ and helps in making better decisions about data processing and analysis.
 			}
 
 			for _, curDataSet := range dataSetsToProfile {
+				fmt.Printf("Profiling '%s', this may take some time...\n", curDataSet)
 				metrics, err := app.ProfileDataset(dataSource, curDataSet, sample)
 				if err != nil {
 					fmt.Printf("Failed to profile %s: %s\n", curDataSet, err)
