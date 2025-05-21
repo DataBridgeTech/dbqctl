@@ -26,8 +26,9 @@ import (
 )
 
 type FailedCheckDetails struct {
-	ID  string
-	Err error
+	ID      string
+	Dataset string
+	Err     error
 }
 
 func NewCheckCommand(app internal.DbqCliApp) *cobra.Command {
@@ -51,6 +52,9 @@ By automating these checks, you can proactively identify and address data qualit
 			}
 
 			exitCode := 0
+			passedCount := 0
+			var failedChecks []FailedCheckDetails
+
 			for _, rule := range checksCfg.Validations {
 				dataSourceId, datasets, err := parseDatasetString(rule.Dataset)
 				if err != nil {
@@ -62,15 +66,20 @@ By automating these checks, you can proactively identify and address data qualit
 					return fmt.Errorf("specified data source not found in dbq configuration: %s", dataSourceId)
 				}
 
-				var failedChecks []FailedCheckDetails
 				for _, dataset := range datasets {
 					fmt.Printf("running %d quality checks for '%s'\n", len(rule.Checks), dataset)
 					for _, check := range rule.Checks {
-						pass, _, _ := app.RunCheck(&check, dataSource, dataset, rule.Where)
-						fmt.Printf("  check %s ('%s') ... %s\n", check.Description, check.ID, getCheckResultLabel(pass))
+						pass, _, err := app.RunCheck(&check, dataSource, dataset, rule.Where)
 
-						if err != nil {
-							failedChecks = append(failedChecks, FailedCheckDetails{ID: check.ID, Err: err})
+						fmt.Printf("  check %s ... %s\n", check.Description, getCheckResultLabel(pass))
+						if err == nil {
+							passedCount += 1
+						} else {
+							failedChecks = append(failedChecks, FailedCheckDetails{
+								ID:      check.ID,
+								Dataset: dataset,
+								Err:     err,
+							})
 						}
 
 						if !pass && strGetOrDefault(string(check.OnFail), dbqcore.OnFailActionError) == dbqcore.OnFailActionError {
@@ -78,19 +87,21 @@ By automating these checks, you can proactively identify and address data qualit
 						}
 					}
 				}
+			}
 
-				if len(failedChecks) != 0 {
-					for _, result := range failedChecks {
-						fmt.Println()
-						fmt.Printf("--- %s ---\n", result.ID)
-						fmt.Printf("error: %s\n", result.Err)
-					}
+			if len(failedChecks) != 0 {
+				for _, result := range failedChecks {
+					fmt.Println()
+					fmt.Printf("--- %s ---\n", result.ID)
+					fmt.Printf("error: %s\n", result.Err)
 				}
 			}
 
+			fmt.Println()
+			failedCount := len(failedChecks)
+			fmt.Printf("\ncheck result: %s. %d passed; %d failed; \n", getCheckResultLabel(failedCount == 0), passedCount, failedCount)
+
 			if exitCode != 0 {
-				// todo: print detailed report
-				// fmt.Printf("\ncheck result: FAILED. 1 passed; 1 failed; \n")
 				os.Exit(exitCode)
 			}
 
