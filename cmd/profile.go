@@ -16,8 +16,7 @@ package cmd
 
 import (
 	"encoding/json"
-	"log"
-
+	"fmt"
 	"github.com/DataBridgeTech/dbqcore"
 	"github.com/DataBridgeTech/dbqctl/internal"
 	"github.com/spf13/cobra"
@@ -58,7 +57,7 @@ and helps in making better decisions about data processing and analysis.
 			for _, curDataSet := range dataSetsToProfile {
 				metrics, err := app.ProfileDataset(dataSource, curDataSet, sample)
 				if err != nil {
-					log.Printf("Failed to profile %s: %s\n", curDataSet, err)
+					fmt.Printf("Failed to profile %s: %s\n", curDataSet, err)
 				} else {
 					profileResults.Profiles[curDataSet] = metrics
 				}
@@ -67,9 +66,10 @@ and helps in making better decisions about data processing and analysis.
 			// todo: introduce output format flag
 			jsonData, err := json.Marshal(profileResults)
 			if err != nil {
-				log.Fatalf("Failed to marshal metrics to JSON: %v", err)
+				fmt.Println("failed to marshal metrics to JSON")
+				panic(err)
 			}
-			log.Println(string(jsonData))
+			fmt.Println(string(jsonData))
 
 			return nil
 		},

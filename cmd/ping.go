@@ -15,8 +15,7 @@
 package cmd
 
 import (
-	"log"
-
+	"fmt"
 	"github.com/DataBridgeTech/dbqctl/internal"
 	"github.com/spf13/cobra"
 )
@@ -40,12 +39,12 @@ This is useful for quickly determining if the data source is online and respondi
 			}
 
 			for _, curDataSource := range sourcesToPing {
-				log.Printf("Pinging data source: %s...\n", curDataSource)
+				fmt.Printf("Conneting to data source: %s...\n", curDataSource)
 				info, err := app.PingDataSource(curDataSource)
 				if err != nil {
-					log.Printf("Connection failed: %s\n", err.Error())
+					fmt.Printf("Connection failed: %s\n", err.Error())
 				} else {
-					log.Printf("Connected: %s\n", info)
+					fmt.Printf("Connected: %s\n", info)
 				}
 			}
 		},

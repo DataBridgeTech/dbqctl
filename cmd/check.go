@@ -18,12 +18,17 @@ import (
 	"fmt"
 	"github.com/DataBridgeTech/dbqcore"
 	"github.com/DataBridgeTech/dbqctl/internal"
-	"log"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+type FailedCheckDetails struct {
+	ID  string
+	Err error
+}
 
 func NewCheckCommand(app internal.DbqCliApp) *cobra.Command {
 	var checksFile string
@@ -37,7 +42,8 @@ which outlines the rules and constraints that the data within the dataset should
 By automating these checks, you can proactively identify and address data quality issues, ensuring that your datasets meet the required standards for analysis and decision-making.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Printf("Reading checks configuration file: %s \n", checksFile)
+			slog.Debug("Reading checks configuration file",
+				"checks_config_path", checksFile)
 
 			checksCfg, err := dbqcore.LoadChecksConfig(checksFile)
 			if err != nil {
@@ -56,24 +62,35 @@ By automating these checks, you can proactively identify and address data qualit
 					return fmt.Errorf("specified data source not found in dbq configuration: %s", dataSourceId)
 				}
 
-				for dsIdx, dataset := range datasets {
-					log.Printf("[%d/%d] Running quality checks for: %s", dsIdx+1, len(datasets), dataset)
-					for cIdx, check := range rule.Checks {
-						pass, _, err := app.RunCheck(&check, dataSource, dataset, rule.Where)
+				var failedChecks []FailedCheckDetails
+				for _, dataset := range datasets {
+					fmt.Printf("running %d quality checks for '%s'\n", len(rule.Checks), dataset)
+					for _, check := range rule.Checks {
+						pass, _, _ := app.RunCheck(&check, dataSource, dataset, rule.Where)
+						fmt.Printf("  check %s ('%s') ... %s\n", check.Description, check.ID, getCheckResultLabel(pass))
+
 						if err != nil {
-							log.Printf("Failed to run check: %s", err.Error())
+							failedChecks = append(failedChecks, FailedCheckDetails{ID: check.ID, Err: err})
 						}
 
-						log.Printf("  [%d/%d] '%s': %s", cIdx+1, len(rule.Checks), check.ID, getCheckResultLabel(pass))
 						if !pass && strGetOrDefault(string(check.OnFail), dbqcore.OnFailActionError) == dbqcore.OnFailActionError {
 							exitCode = 1
 						}
 					}
 				}
+
+				if len(failedChecks) != 0 {
+					for _, result := range failedChecks {
+						fmt.Println()
+						fmt.Printf("--- %s ---\n", result.ID)
+						fmt.Printf("error: %s\n", result.Err)
+					}
+				}
 			}
 
 			if exitCode != 0 {
-				log.Printf("One or more checks with on_fail = 'error' action have failed, exiting.")
+				// todo: print detailed report
+				// fmt.Printf("\ncheck result: FAILED. 1 passed; 1 failed; \n")
 				os.Exit(exitCode)
 			}
 
@@ -124,9 +141,9 @@ func parseDatasetString(input string) (datasource string, datasets []string, err
 
 func getCheckResultLabel(passed bool) string {
 	if passed {
-		return "passed"
+		return "ok"
 	} else {
-		return "failed"
+		return "FAILED"
 	}
 }
 

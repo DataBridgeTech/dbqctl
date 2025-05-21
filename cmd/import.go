@@ -15,10 +15,10 @@
 package cmd
 
 import (
-	"log"
-
+	"fmt"
 	"github.com/DataBridgeTech/dbqctl/internal"
 	"github.com/spf13/cobra"
+	"log"
 )
 
 func NewImportCommand(app internal.DbqCliApp) *cobra.Command {
@@ -50,7 +50,7 @@ This command is useful for quickly onboarding data from external systems, allowi
 					return nil
 				}
 
-				log.Printf("Found %d datasets in %s to import: %v\n", len(datasets), curDataSource, datasets)
+				fmt.Printf("found %d datasets in %s to import: %v\n", len(datasets), curDataSource, datasets)
 
 				ds := app.FindDataSourceById(dataSource)
 				if ds != nil {
@@ -63,7 +63,7 @@ This command is useful for quickly onboarding data from external systems, allowi
 				if err != nil {
 					return err
 				}
-				log.Println("dbq config has been updated")
+				fmt.Println("dbq config has been updated")
 			}
 
 			return nil
