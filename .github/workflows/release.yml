@@ -71,9 +71,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ASSET_NAME }} # Use the compressed archive name as artifact name
-          path: ${{ env.ASSET_PATH }} # Upload the compressed archive
-          retention-days: 1 # Keep artifact only for a short time
+          name: ${{ env.ASSET_NAME }}
+          path: ${{ env.ASSET_PATH }}
+          retention-days: 1
 
   release:
     name: Create GitHub Release
