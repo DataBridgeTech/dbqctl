@@ -56,7 +56,7 @@ func NewDbqCliApp(dbqConfigPath string) DbqCliApp {
 func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := getDbqConnector(*dataSource)
+	cnn, err := getDbqConnector(*dataSource, app.logLevel)
 	if err != nil {
 		return "", err
 	}
@@ -72,7 +72,7 @@ func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := getDbqConnector(*dataSource)
+	cnn, err := getDbqConnector(*dataSource, app.logLevel)
 	if err != nil {
 		return []string{}, err
 	}
@@ -83,7 +83,7 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := getDbqConnector(*dataSource)
+	cnn, err := getDbqConnector(*dataSource, app.logLevel)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (app *DbqAppImpl) FindDataSourceById(srcId string) *dbqcore.DataSource {
 }
 
 func (app *DbqAppImpl) RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error) {
-	cnn, err := getDbqConnector(*dataSource)
+	cnn, err := getDbqConnector(*dataSource, app.logLevel)
 	if err != nil {
 		return false, "", err
 	}
@@ -156,11 +156,12 @@ func initConfig(dbqConfigPath string) (*dbqcore.DbqConfig, string) {
 	return &dbqConfig, v.ConfigFileUsed()
 }
 
-func getDbqConnector(ds dbqcore.DataSource) (dbqcore.DbqConnector, error) {
+func getDbqConnector(ds dbqcore.DataSource, logLevel slog.Level) (dbqcore.DbqConnector, error) {
 	dsType := strings.ToLower(ds.Type)
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
 	switch dsType {
 	case "clickhouse":
-		return dbqcore.NewClickhouseDbqConnector(ds)
+		return dbqcore.NewClickhouseDbqConnector(ds, slog.New(logHandler))
 	default:
 		return nil, fmt.Errorf("data source type '%s' is not supported", dsType)
 	}
