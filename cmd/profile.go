@@ -20,12 +20,18 @@ import (
 	"github.com/DataBridgeTech/dbqcore"
 	"github.com/DataBridgeTech/dbqctl/internal"
 	"github.com/spf13/cobra"
+	"runtime"
 )
+
+type ProfileResultOutput struct {
+	Profiles map[string]*dbqcore.TableMetrics `json:"profiles"`
+}
 
 func NewProfileCommand(app internal.DbqCliApp) *cobra.Command {
 	var dataSource string
 	var dataSet string
 	var sample bool
+	var maxConcurrent int
 
 	cmd := &cobra.Command{
 		Use:   "profile",
@@ -50,13 +56,13 @@ and helps in making better decisions about data processing and analysis.
 				}
 			}
 
-			profileResults := &dbqcore.ProfileResultOutput{
+			profileResults := &ProfileResultOutput{
 				Profiles: make(map[string]*dbqcore.TableMetrics),
 			}
 
 			for _, curDataSet := range dataSetsToProfile {
-				fmt.Printf("Profiling '%s', this may take some time...\n", curDataSet)
-				metrics, err := app.ProfileDataset(dataSource, curDataSet, sample)
+				fmt.Printf("Profiling '%s' (using %d jobs) , this may take some time...\n", curDataSet, maxConcurrent)
+				metrics, err := app.ProfileDataset(dataSource, curDataSet, sample, maxConcurrent)
 				if err != nil {
 					fmt.Printf("Failed to profile %s: %s\n", curDataSet, err)
 				} else {
@@ -76,11 +82,12 @@ and helps in making better decisions about data processing and analysis.
 		},
 	}
 
-	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource in which datasets will be profiled")
+	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "datasource in which datasets will be profiled")
 	_ = cmd.MarkFlagRequired("datasource")
 
-	cmd.Flags().StringVarP(&dataSet, "dataset", "s", "", "Dataset within specified data source")
-	cmd.Flags().BoolVarP(&sample, "sample", "m", false, "Include data samples in profiling report")
+	cmd.Flags().StringVarP(&dataSet, "dataset", "s", "", "dataset within specified data source")
+	cmd.Flags().BoolVarP(&sample, "sample", "m", false, "include data samples in profiling report")
+	cmd.Flags().IntVarP(&maxConcurrent, "jobs", "j", runtime.NumCPU(), "set the maximum number of jobs to execute against the datasource during profiling. By default, this is equal to the number of CPUs on the host machine.")
 
 	return cmd
 }

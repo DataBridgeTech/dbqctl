@@ -30,7 +30,7 @@ import (
 type DbqCliApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
-	ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error)
+	ProfileDataset(srcId string, dataset string, sample bool, maxConcurrent int) (*dbqcore.TableMetrics, error)
 	RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
 	GetDbqConfig() *dbqcore.DbqConfig
 	SaveDbqConfig() error
@@ -80,7 +80,7 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 	return cnn.ImportDatasets(filter)
 }
 
-func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool) (*dbqcore.TableMetrics, error) {
+func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool, maxConcurrent int) (*dbqcore.TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
 	cnn, err := getDbqConnector(*dataSource, app.logLevel)
@@ -88,7 +88,7 @@ func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool)
 		return nil, err
 	}
 
-	return cnn.ProfileDataset(dataset, sample)
+	return cnn.ProfileDataset(dataset, sample, maxConcurrent)
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *dbqcore.DbqConfig {

@@ -109,7 +109,7 @@ By automating these checks, you can proactively identify and address data qualit
 		},
 	}
 
-	cmd.Flags().StringVarP(&checksFile, "checks", "c", "", "Path to data quality checks file")
+	cmd.Flags().StringVarP(&checksFile, "checks", "c", "", "path to data quality checks file")
 	_ = cmd.MarkFlagRequired("checks")
 
 	return cmd

@@ -50,7 +50,7 @@ This is useful for quickly determining if the data source is online and respondi
 		},
 	}
 
-	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "Datasource to ping")
+	cmd.Flags().StringVarP(&dataSource, "datasource", "d", "", "datasource to ping")
 
 	return cmd
 }
