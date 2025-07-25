@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/DataBridgeTech/dbqcore"
 
@@ -157,12 +156,11 @@ func initConfig(dbqConfigPath string) (*dbqcore.DbqConfig, string) {
 }
 
 func getDbqConnector(ds dbqcore.DataSource, logLevel slog.Level) (dbqcore.DbqConnector, error) {
-	dsType := strings.ToLower(ds.Type)
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
-	switch dsType {
-	case "clickhouse":
+	switch ds.Type {
+	case dbqcore.DataSourceTypeClickhouse:
 		return dbqcore.NewClickhouseDbqConnector(ds, slog.New(logHandler))
 	default:
-		return nil, fmt.Errorf("data source type '%s' is not supported", dsType)
+		return nil, fmt.Errorf("data source type '%s' is not supported", ds.Type)
 	}
 }
