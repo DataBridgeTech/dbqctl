@@ -46,7 +46,7 @@ By automating these checks, you can proactively identify and address data qualit
 			slog.Debug("Reading checks configuration file",
 				"checks_config_path", checksFile)
 
-			checksCfg, err := dbqcore.LoadChecksConfig(checksFile)
+			checksCfg, err := dbqcore.LoadChecksFileConfig(checksFile)
 			if err != nil {
 				return fmt.Errorf("error while loading checks configuration file: %w", err)
 			}
@@ -72,7 +72,7 @@ By automating these checks, you can proactively identify and address data qualit
 						pass, _, err := app.RunCheck(&check, dataSource, dataset, rule.Where)
 
 						fmt.Printf("  check %s ... %s\n", check.Description, getCheckResultLabel(pass))
-						if err == nil {
+						if pass {
 							passedCount += 1
 						} else {
 							failedChecks = append(failedChecks, FailedCheckDetails{
@@ -82,7 +82,7 @@ By automating these checks, you can proactively identify and address data qualit
 							})
 						}
 
-						if !pass && strGetOrDefault(string(check.OnFail), dbqcore.OnFailActionError) == dbqcore.OnFailActionError {
+						if !pass && strGetOrDefault(string(check.OnFail), string(dbqcore.OnFailActionError)) == string(dbqcore.OnFailActionError) {
 							exitCode = 1
 						}
 					}

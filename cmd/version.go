@@ -17,12 +17,12 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/DataBridgeTech/dbqcore"
+	"github.com/DataBridgeTech/dbqcore/dbq"
 	"github.com/spf13/cobra"
 )
 
 const (
-	DbqCtlVersion = "v0.1.1"
+	DbqCtlVersion = "v0.1.2"
 )
 
 func NewVersionCommand() *cobra.Command {
@@ -31,7 +31,7 @@ func NewVersionCommand() *cobra.Command {
 		Short: "Prints dbqctl and core lib version",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("DataBridge Quality CLI: %s\n", DbqCtlVersion)
-			fmt.Printf("DataBridge dbqcore lib version: %s\n", dbqcore.GetDbqCoreLibVersion())
+			fmt.Printf("DataBridge dbqcore lib version: %s\n", dbq.GetDbqCoreLibVersion())
 		},
 	}
 

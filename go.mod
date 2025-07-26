@@ -3,14 +3,14 @@ module github.com/DataBridgeTech/dbqctl
 go 1.24.5
 
 require (
-	github.com/DataBridgeTech/dbqcore v0.0.8
+	github.com/DataBridgeTech/dbqcore v0.1.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-//replace github.com/DataBridgeTech/dbqcore => ../dbqcore
+replace github.com/DataBridgeTech/dbqcore => ../dbqcore
 
 require (
 	github.com/ClickHouse/ch-go v0.67.0 // indirect

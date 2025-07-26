@@ -15,11 +15,12 @@
 package internal
 
 import (
-	"fmt"
+	"context"
 	"log/slog"
 	"os"
 
 	"github.com/DataBridgeTech/dbqcore"
+	"github.com/DataBridgeTech/dbqcore/dbq"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -30,7 +31,7 @@ type DbqCliApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
 	ProfileDataset(srcId string, dataset string, sample bool, maxConcurrent int) (*dbqcore.TableMetrics, error)
-	RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
+	RunCheck(check *dbqcore.DataQualityCheck, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
 	GetDbqConfig() *dbqcore.DbqConfig
 	SaveDbqConfig() error
 	SetLogLevel(level slog.Level)
@@ -41,26 +42,29 @@ type DbqAppImpl struct {
 	dbqConfigPath string
 	dbqConfig     *dbqcore.DbqConfig
 	logLevel      slog.Level
+	logger        *slog.Logger
 }
 
 func NewDbqCliApp(dbqConfigPath string) DbqCliApp {
 	dbqConfig, dbqConfigUsedPath := initConfig(dbqConfigPath)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 	return &DbqAppImpl{
 		dbqConfigPath: dbqConfigUsedPath,
 		dbqConfig:     dbqConfig,
 		logLevel:      slog.LevelError,
+		logger:        logger, // todo: fix logger init
 	}
 }
 
 func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := getDbqConnector(*dataSource, app.logLevel)
+	cnn, err := dbq.NewDbqConnector(dataSource, app.logger)
 	if err != nil {
 		return "", err
 	}
 
-	info, err := cnn.Ping()
+	info, err := cnn.Ping(context.Background()) // todo: ctx propagation
 	if err != nil {
 		return "", err
 	}
@@ -71,23 +75,23 @@ func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := getDbqConnector(*dataSource, app.logLevel)
+	cnn, err := dbq.NewDbqConnector(dataSource, app.logger)
 	if err != nil {
 		return []string{}, err
 	}
 
-	return cnn.ImportDatasets(filter)
+	return cnn.ImportDatasets(context.Background(), filter) // todo: ctx propagation
 }
 
 func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool, maxConcurrent int) (*dbqcore.TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := getDbqConnector(*dataSource, app.logLevel)
+	dbqProfiler, err := dbq.NewDbqProfiler(dataSource, app.logger)
 	if err != nil {
 		return nil, err
 	}
 
-	return cnn.ProfileDataset(dataset, sample, maxConcurrent)
+	return dbqProfiler.ProfileDataset(context.Background(), dataset, sample, maxConcurrent) // todo: ctx propagation
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *dbqcore.DbqConfig {
@@ -117,12 +121,13 @@ func (app *DbqAppImpl) FindDataSourceById(srcId string) *dbqcore.DataSource {
 	return nil
 }
 
-func (app *DbqAppImpl) RunCheck(check *dbqcore.Check, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error) {
-	cnn, err := getDbqConnector(*dataSource, app.logLevel)
+func (app *DbqAppImpl) RunCheck(check *dbqcore.DataQualityCheck, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error) {
+	dbqValidator, err := dbq.NewDbqValidator(dataSource, app.logger)
 	if err != nil {
 		return false, "", err
 	}
-	return cnn.RunCheck(check, dataset, defaultWhere)
+
+	return dbqValidator.RunCheck(context.Background(), check, dataset, defaultWhere) // todo: ctx propagation
 }
 
 func (app *DbqAppImpl) SetLogLevel(logLevel slog.Level) {
@@ -153,14 +158,4 @@ func initConfig(dbqConfigPath string) (*dbqcore.DbqConfig, string) {
 	}
 
 	return &dbqConfig, v.ConfigFileUsed()
-}
-
-func getDbqConnector(ds dbqcore.DataSource, logLevel slog.Level) (dbqcore.DbqConnector, error) {
-	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})
-	switch ds.Type {
-	case dbqcore.DataSourceTypeClickhouse:
-		return dbqcore.NewClickhouseDbqConnector(ds, slog.New(logHandler))
-	default:
-		return nil, fmt.Errorf("data source type '%s' is not supported", ds.Type)
-	}
 }
