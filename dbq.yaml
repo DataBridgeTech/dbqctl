@@ -21,3 +21,20 @@ datasources:
       datasets:
         - public.land_registry_price_paid_uk
         - public.test_table_name
+    - id: mysql
+      type: mysql
+      configuration:
+        host: localhost
+        port: 13306
+        username: root
+        password: changeme
+        database: employees
+      datasets:
+        - employees.current_dept_emp
+        - employees.departments
+        - employees.dept_emp
+        - employees.dept_emp_latest_date
+        - employees.dept_manager
+        - employees.employees
+        - employees.salaries
+        - employees.titles

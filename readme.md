@@ -24,6 +24,7 @@ It is designed to be flexible, fast, easy to use and integrate seamlessly into y
 ## Supported databases
 - [ClickHouse](https://clickhouse.com/)
 - [PostgreSQL](https://www.postgresql.org/)
+- [MySQL](https://www.mysql.com/)
 
 ## Usage
 
@@ -68,6 +69,8 @@ datasources:
 ```
 
 ### Checks example
+
+Refer to [checks.yaml](./checks.yaml) example for full configuration overview. 
 
 ```yaml
 # checks.yaml
@@ -127,6 +130,13 @@ validations:
         
       - id: stddev_pop(price) < 500000
         description: "price stddev"
+        
+  # https://github.com/datacharmer/test_db
+  - dataset: mysql@[employees.salaries]
+    checks:
+      - id: row_count > 0
+        description: "data should be present"
+        on_fail: error
 ```
 
 ### Commands
