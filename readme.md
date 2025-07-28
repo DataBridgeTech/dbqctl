@@ -23,6 +23,7 @@ It is designed to be flexible, fast, easy to use and integrate seamlessly into y
 
 ## Supported databases
 - [ClickHouse](https://clickhouse.com/)
+- [PostgreSQL](https://www.postgresql.org/)
 
 ## Usage
 
@@ -53,6 +54,17 @@ datasources:
         database: default
       datasets:
         - nyc_taxi.trips_small
+    - id: pg
+      type: postgresql
+      configuration:
+        host: localhost
+        port: 5432
+        username: default
+        password: changeme
+        database: uk_dbq_test
+      datasets:
+        - public.land_registry_price_paid_uk
+        - public.test_table_name
 ```
 
 ### Checks example
@@ -93,6 +105,28 @@ validations:
         description: "raw query quality test"
         query: |
           select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
+          
+  # https://wiki.postgresql.org/wiki/Sample_Databases
+  - dataset: pg@[public.land_registry_price_paid_uk]
+    # exclude January for example
+    where: "transfer_date >= '2025-02-01 00:00:00.000000'"
+    checks:
+      - id: row_count > 0
+        description: "data should be present"
+        on_fail: error
+        
+      - id: row_count between 200000 and 300000
+        description: "expected rows count"
+        on_fail: warn
+        
+      - id: min(price) > 0
+        description: "min(price) should be greater than zero"
+        
+      - id: max(price) < 100000000
+        description: "max(price) should be less than 100_000_000"
+        
+      - id: stddev_pop(price) < 500000
+        description: "price stddev"
 ```
 
 ### Commands
@@ -117,7 +151,7 @@ Available Commands:
 Flags:
       --config string   config file (default is $HOME/.dbq.yaml or ./dbq.yaml)
   -h, --help            help for dbqctl
-  -v, --verbose         Enables verbose logging
+  -v, --verbose         enables verbose logging
 
 Use "dbqctl [command] --help" for more information about a command.
 ```
@@ -131,10 +165,10 @@ $ dqbctl ping cnn-id
 $ dbqctl import cnn-id --filter "reporting.*" --cfg checks.yaml --update-cfg
 
 # run checks from checks.yaml file
-$ dbqctl check --cfg checks.yaml
+$ dbqctl check --checks checks.yaml
 
 # override default dbqctl config file
-$ dbqctl --config /Users/artem/code/dbq/dbq.yaml import
+$ dbqctl --config /path/to/dbq.yaml import
 
 # run dataset profile to collect general stats
 $ dbqctl profile --datasource cnn-id --dataset table_name

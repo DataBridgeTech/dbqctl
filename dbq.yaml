@@ -10,3 +10,14 @@ datasources:
         database: default
       datasets:
         - nyc_taxi.trips_small
+    - id: pg
+      type: postgresql
+      configuration:
+        host: localhost
+        port: 5432
+        username: default
+        password: changeme
+        database: uk_dbq_test
+      datasets:
+        - public.land_registry_price_paid_uk
+        - public.test_table_name

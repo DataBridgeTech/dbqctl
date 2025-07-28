@@ -32,3 +32,21 @@ validations:
         description: "raw query quality test"
         query: |
           select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
+
+  # https://wiki.postgresql.org/wiki/Sample_Databases
+  - dataset: pg@[public.land_registry_price_paid_uk]
+    # exclude January for example
+    where: "transfer_date >= '2025-02-01 00:00:00.000000'"
+    checks:
+      - id: row_count > 0
+        description: "data should be present"
+        on_fail: error
+      - id: row_count between 200000 and 300000
+        description: "expected rows count"
+        on_fail: warn
+      - id: min(price) > 0
+        description: "min(price) should be greater than zero"
+      - id: max(price) < 100000000
+        description: "max(price) should be less than 100_000_000"
+      - id: stddev_pop(price) < 500000
+        description: "price stddev"
