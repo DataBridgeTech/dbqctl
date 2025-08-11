@@ -77,17 +77,17 @@ Refer to [checks.yaml](./checks.yaml) example for full configuration overview.
 version: "1"
 validations:
   # https://clickhouse.com/docs/getting-started/example-datasets/nyc-taxi
-  - dataset: ch@[nyc_taxi.trips_small]
+  - dataset: ch@[nyc_taxi.trips_small, nyc_taxi.trips_full]
     # common pre-filter for every check, e.g. to run daily check only for yesterday
     where: "pickup_datetime > '2014-01-01'"
     checks:
       - id: row_count > 0
         description: "data should be present" # optional
-        on_fail: error # optional (error, warn), default "error"
+        on_error: alert # optional (ignore, alert), default "alert"
 
       - id: row_count between 100 and 30000
         description: "expected rows count"
-        on_fail: warn
+        on_error: ignore
 
       - id: null_count(pickup_ntaname) == 0
         description: "no nulls are allowed in column: pickup_ntaname"
@@ -108,7 +108,7 @@ validations:
         description: "raw query quality test"
         query: |
           select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
-          
+
   # https://wiki.postgresql.org/wiki/Sample_Databases
   - dataset: pg@[public.land_registry_price_paid_uk]
     # exclude January for example
@@ -116,27 +116,20 @@ validations:
     checks:
       - id: row_count > 0
         description: "data should be present"
-        on_fail: error
-        
-      - id: row_count between 200000 and 300000
-        description: "expected rows count"
-        on_fail: warn
-        
+        on_error: alert
+
       - id: min(price) > 0
         description: "min(price) should be greater than zero"
-        
+
       - id: max(price) < 100000000
         description: "max(price) should be less than 100_000_000"
-        
-      - id: stddev_pop(price) < 500000
-        description: "price stddev"
-        
+
   # https://github.com/datacharmer/test_db
   - dataset: mysql@[employees.salaries]
     checks:
       - id: row_count > 0
         description: "data should be present"
-        on_fail: error
+        on_error: alert
 ```
 
 ### Commands
@@ -168,18 +161,21 @@ Use "dbqctl [command] --help" for more information about a command.
 
 ### Quick usage examples
 ```bash
-# check connection to datasource
-$ dqbctl ping cnn-id
+# check connection for datasource
+$ dqbctl ping -d cnn-id
+
+# check connection for all configured datasources
+$ dqbctl ping
 
 # automatically import datasets from datasource with applied filter and in-place update config file 
-$ dbqctl import cnn-id --filter "reporting.*" --cfg checks.yaml --update-cfg
+$ dbqctl import -d cnn-id --filter "reporting" --update-config
 
 # run checks from checks.yaml file
-$ dbqctl check --checks checks.yaml
+$ dbqctl check --checks ./checks.yaml
 
 # override default dbqctl config file
 $ dbqctl --config /path/to/dbq.yaml import
 
-# run dataset profile to collect general stats
-$ dbqctl profile --datasource cnn-id --dataset table_name
+# run dataset profile to collect general stats (limit concurrent jobs to 8)
+$ dbqctl profile -d cnn-id --dataset table_name -j 8
 ```

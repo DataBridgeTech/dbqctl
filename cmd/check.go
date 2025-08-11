@@ -16,11 +16,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/DataBridgeTech/dbqcore"
-	"github.com/DataBridgeTech/dbqctl/internal"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/DataBridgeTech/dbqcore"
+	"github.com/DataBridgeTech/dbqctl/internal"
 
 	"github.com/spf13/cobra"
 )
@@ -82,7 +83,7 @@ By automating these checks, you can proactively identify and address data qualit
 							})
 						}
 
-						if !pass && strGetOrDefault(string(check.OnFail), string(dbqcore.OnFailActionError)) == string(dbqcore.OnFailActionError) {
+						if !pass && strGetOrDefault(string(check.OnError), string(dbqcore.OnErrorActionAlert)) == string(dbqcore.OnErrorActionAlert) {
 							exitCode = 1
 						}
 					}

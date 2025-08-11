@@ -7,11 +7,11 @@ validations:
     checks:
       - id: row_count > 0
         description: "data should be present" # optional
-        on_fail: error # optional (error, warn), default "error"
+        on_error: alert # optional (ignore, alert), default "alert"
 
       - id: row_count between 100 and 30000
         description: "expected rows count"
-        on_fail: warn
+        on_error: ignore
 
       - id: null_count(pickup_ntaname) == 0
         description: "no nulls are allowed in column: pickup_ntaname"
@@ -40,11 +40,11 @@ validations:
     checks:
       - id: row_count > 0
         description: "data should be present"
-        on_fail: error
+        on_error: alert
 
       - id: row_count between 200000 and 300000
         description: "expected rows count"
-        on_fail: warn
+        on_error: ignore
 
       - id: min(price) > 0
         description: "min(price) should be greater than zero"
@@ -60,7 +60,7 @@ validations:
     checks:
       - id: row_count > 0
         description: "data should be present"
-        on_fail: error
+        on_error: alert
 
       - id: min(salary) > 0
         description: "min(salary) should be greater than zero"

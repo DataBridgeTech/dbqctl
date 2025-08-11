@@ -91,7 +91,7 @@ func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool,
 		return nil, err
 	}
 
-	return dbqProfiler.ProfileDataset(context.Background(), dataset, sample, maxConcurrent) // todo: ctx propagation
+	return dbqProfiler.ProfileDataset(context.Background(), dataset, sample, maxConcurrent, true) // todo: ctx propagation
 }
 
 func (app *DbqAppImpl) GetDbqConfig() *dbqcore.DbqConfig {
