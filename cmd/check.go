@@ -27,9 +27,10 @@ import (
 )
 
 type FailedCheckDetails struct {
-	ID      string
-	Dataset string
-	Err     error
+	Expression string
+	Dataset    string
+	ActualVal  string
+	Err        string
 }
 
 func NewCheckCommand(app internal.DbqCliApp) *cobra.Command {
@@ -56,7 +57,7 @@ By automating these checks, you can proactively identify and address data qualit
 			passedCount := 0
 			var failedChecks []FailedCheckDetails
 
-			for _, rule := range checksCfg.Validations {
+			for _, rule := range checksCfg.Rules {
 				dataSourceId, datasets, err := parseDatasetString(rule.Dataset)
 				if err != nil {
 					return fmt.Errorf("error while parsing dataset property: %w", err)
@@ -70,20 +71,26 @@ By automating these checks, you can proactively identify and address data qualit
 				for _, dataset := range datasets {
 					fmt.Printf("running %d quality checks for '%s'\n", len(rule.Checks), dataset)
 					for _, check := range rule.Checks {
-						pass, _, err := app.RunCheck(&check, dataSource, dataset, rule.Where)
+						validationResult := app.RunCheck(&check, dataSource, dataset, rule.Where)
 
-						fmt.Printf("  check %s ... %s\n", check.Description, getCheckResultLabel(pass))
-						if pass {
+						checkLabel := check.Expression
+						if check.Description != "" {
+							checkLabel = check.Description
+						}
+
+						fmt.Printf("  %s: %s \n", getCheckResultLabel(validationResult.Pass), checkLabel)
+						if validationResult.Pass {
 							passedCount += 1
 						} else {
 							failedChecks = append(failedChecks, FailedCheckDetails{
-								ID:      check.ID,
-								Dataset: dataset,
-								Err:     err,
+								Expression: check.Expression,
+								Dataset:    dataset,
+								ActualVal:  validationResult.QueryResultValue,
+								Err:        validationResult.Error,
 							})
 						}
 
-						if !pass && strGetOrDefault(string(check.OnError), string(dbqcore.OnErrorActionAlert)) == string(dbqcore.OnErrorActionAlert) {
+						if !validationResult.Pass && strGetOrDefault(string(check.OnFail), string(dbqcore.OnFailActionError)) == string(dbqcore.OnFailActionError) {
 							exitCode = 1
 						}
 					}
@@ -93,8 +100,18 @@ By automating these checks, you can proactively identify and address data qualit
 			if len(failedChecks) != 0 {
 				for _, result := range failedChecks {
 					fmt.Println()
-					fmt.Printf("--- %s ---\n", result.ID)
-					fmt.Printf("error: %s\n", result.Err)
+					fmt.Printf("--- %s : %s ---\n", result.Dataset, result.Expression)
+					if result.ActualVal != "" {
+						units := ""
+						if strings.HasPrefix(result.Expression, "freshness") {
+							units = " (diff in seconds)"
+						}
+
+						fmt.Printf("actual value: %s%s\n", result.ActualVal, units)
+					}
+					if result.Err != "" {
+						fmt.Printf("error: %s\n", result.Err)
+					}
 				}
 			}
 

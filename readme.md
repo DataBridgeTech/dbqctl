@@ -8,17 +8,29 @@ It is designed to be flexible, fast, easy to use and integrate seamlessly into y
 ## Features
 
 - Effortless dataset import: pull in datasets (e.g. tables) from your chosen DWH with filters
-- Comprehensive data profiling: gain instant insights into your data with automatic profiling, including:
-  - Data Types
+- Comprehensive data profiling - gain instant insights into your data with automatic profiling, including:
+  - Columns, positions, Data Types
   - Null & Blank Counts
   - Min/Max/Avg Values
   - Standard Deviation
   - Most Frequent Values
   - Rows Sampling
-- Data quality checks with built-in support for:
-  - Row Count
-  - Null Count
-  - Average, Max, Min, Sum
+- Data quality checks with built-in support for various checks:
+  - Schema-level checks:
+    - `expect_columns_ordered`: Validate table columns match an ordered list
+    - `expect_columns`: Validate table has one of columns from unordered list
+    - `columns_not_present`: Validate table doesn't have any columns from the list or matching pattern
+  - Table-level:
+    - `row_count`: Count of rows in the table
+    - `raw_query`: Custom SQL query for complex validations
+  - Column-level:
+    - `not_null`: Check for null values in a column
+    - `freshness`: Check data recency based on timestamp column
+    - `uniqueness`: Check for unique values in a column
+    - `min/max`: Minimum and maximum values for numeric columns
+    - `sum`: Sum of values in a column
+    - `avg`: Average of values in a column
+    - `stddev`: Standard deviation of values in a column
 - Flexible custom SQL checks: you can define and run your own SQL-based quality rules to meet unique business requirements.
 
 ## Supported databases
@@ -81,55 +93,99 @@ validations:
     # common pre-filter for every check, e.g. to run daily check only for yesterday
     where: "pickup_datetime > '2014-01-01'"
     checks:
-      - id: row_count > 0
-        description: "data should be present" # optional
-        on_error: alert # optional (ignore, alert), default "alert"
+      # schema-level checks
+      - schema_check:
+          expect_columns_ordered:
+            columns_order: [trip_id, pickup_datetime, dropoff_datetime, trip_distance, fare_amount]
+        desc: "Ensure table columns are in the expected order"
+        on_fail: error
 
-      - id: row_count between 100 and 30000
-        description: "expected rows count"
-        on_error: ignore
+      - schema_check:
+          expect_columns:
+            columns: [trip_id, fare_amount]
+        desc: "Ensure required columns exist"
+        on_fail: error
 
-      - id: null_count(pickup_ntaname) == 0
-        description: "no nulls are allowed in column: pickup_ntaname"
+      - schema_check:
+          columns_not_present:
+            columns: [credit_card_number, credit_card_cvv]
+            pattern: "pii_*"
+        desc: "Ensure PII and credit card info is not present in the table"
+        on_fail: error
 
-      - id: min(pickup_datetime) < now() - interval 3 day
-        description: "min(pickup_datetime) should not be earlier than 3 days"
+      # table-level checks
+      - row_count between 1000 and 50000:
+          desc: "Dataset should contain a reasonable number of trips"
+          on_fail: error
 
-      - id: stddevPop(trip_distance) < 100_000
-        description: "check stddev value"
+      # column existence and nullability
+      - not_null(trip_id):
+          desc: "Trip ID is mandatory"
+      - not_null(pickup_datetime)
+      - not_null(dropoff_datetime)
 
-      - id: sum(fare_amount) <= 10_000_000
-        description: "sum of value"
+      # data freshness
+      - freshness(pickup_datetime) < 7d:
+          desc: "Data should be no older than 7 days"
+          on_fail: warn
 
-      - id: countIf(trip_id == 1) == 1
-        description: "check trip id"
+      # uniqueness constraints
+      - uniqueness(trip_id):
+          desc: "Trip IDs must be unique"
+          on_fail: error
 
-      - id: raw_query
-        description: "raw query quality test"
-        query: |
-          select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
+      # numeric validations
+      - min(trip_distance) >= 0:
+          desc: "Trip distance cannot be negative"
+      - max(trip_distance) < 1000:
+          desc: "Maximum trip distance seems unrealistic"
+          on_fail: warn
+      - avg(trip_distance) between 1.0 and 20.0:
+          desc: "Average trip distance should be reasonable"
+      - stddev(trip_distance) < 100:
+          desc: "Trip distance variation should be within normal range"
+
+      # fare validations
+      - min(fare_amount) > 0:
+          desc: "Fare amount should be positive"
+      - max(fare_amount) < 1000:
+          desc: "Maximum fare seems too high"
+      - sum(fare_amount) between 10000 and 10000000:
+          desc: "Total fare amount should be within expected range"
+
+      # custom validation with raw query
+      - raw_query:
+          desc: "Check for trips with zero distance but positive fare"
+          query: "select count() from {{dataset}} where trip_distance = 0 and fare_amount > 0"
+          on_fail: warn
 
   # https://wiki.postgresql.org/wiki/Sample_Databases
   - dataset: pg@[public.land_registry_price_paid_uk]
     # exclude January for example
     where: "transfer_date >= '2025-02-01 00:00:00.000000'"
     checks:
-      - id: row_count > 0
-        description: "data should be present"
-        on_error: alert
+      # schema validation
+      - schema_check:
+          expect_columns_ordered:
+            columns: [transaction_id, price, transfer_date, property_type, address]
+        desc: "Validate expected column order for data consistency"
+        on_fail: warn
 
-      - id: min(price) > 0
-        description: "min(price) should be greater than zero"
+      - schema_check:
+          expect_columns:
+            columns: [transaction_id, price, property_type]
+        desc: "Ensure critical columns exist"
+        on_fail: error
 
-      - id: max(price) < 100000000
-        description: "max(price) should be less than 100_000_000"
+      - row_count() between 100 and 100000:
+          desc: "Recent property transactions should be within expected volume"
 
   # https://github.com/datacharmer/test_db
   - dataset: mysql@[employees.salaries]
     checks:
-      - id: row_count > 0
-        description: "data should be present"
-        on_error: alert
+      - row_count between 100 and 10000:
+          desc: "Monthly order volume should be within business expectations"
+          on_fail: warn
 ```
 
 ### Commands

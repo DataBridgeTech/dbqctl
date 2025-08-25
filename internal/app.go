@@ -18,6 +18,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"runtime"
 
 	"github.com/DataBridgeTech/dbqcore"
 	"github.com/DataBridgeTech/dbqcore/dbq"
@@ -31,7 +32,7 @@ type DbqCliApp interface {
 	PingDataSource(srcId string) (string, error)
 	ImportDatasets(srcId string, filter string) ([]string, error)
 	ProfileDataset(srcId string, dataset string, sample bool, maxConcurrent int) (*dbqcore.TableMetrics, error)
-	RunCheck(check *dbqcore.DataQualityCheck, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error)
+	RunCheck(check *dbqcore.DataQualityCheck, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) *dbqcore.ValidationResult
 	GetDbqConfig() *dbqcore.DbqConfig
 	SaveDbqConfig() error
 	SetLogLevel(level slog.Level)
@@ -43,6 +44,7 @@ type DbqAppImpl struct {
 	dbqConfig     *dbqcore.DbqConfig
 	logLevel      slog.Level
 	logger        *slog.Logger
+	poolSize      int
 }
 
 func NewDbqCliApp(dbqConfigPath string) DbqCliApp {
@@ -52,14 +54,15 @@ func NewDbqCliApp(dbqConfigPath string) DbqCliApp {
 		dbqConfigPath: dbqConfigUsedPath,
 		dbqConfig:     dbqConfig,
 		logLevel:      slog.LevelError,
-		logger:        logger, // todo: fix logger init
+		logger:        logger,           // todo: fix logger init
+		poolSize:      runtime.NumCPU(), // todo: make configurable
 	}
 }
 
 func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := dbq.NewDbqConnector(dataSource, app.logger)
+	cnn, err := dbq.NewDbqConnector(dataSource, app.poolSize, app.logger)
 	if err != nil {
 		return "", err
 	}
@@ -75,7 +78,7 @@ func (app *DbqAppImpl) PingDataSource(srcId string) (string, error) {
 func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	cnn, err := dbq.NewDbqConnector(dataSource, app.logger)
+	cnn, err := dbq.NewDbqConnector(dataSource, app.poolSize, app.logger)
 	if err != nil {
 		return []string{}, err
 	}
@@ -86,7 +89,7 @@ func (app *DbqAppImpl) ImportDatasets(srcId string, filter string) ([]string, er
 func (app *DbqAppImpl) ProfileDataset(srcId string, dataset string, sample bool, maxConcurrent int) (*dbqcore.TableMetrics, error) {
 	var dataSource = app.FindDataSourceById(srcId)
 
-	dbqProfiler, err := dbq.NewDbqProfiler(dataSource, app.logger)
+	dbqProfiler, err := dbq.NewDbqProfiler(dataSource, app.poolSize, app.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -121,13 +124,14 @@ func (app *DbqAppImpl) FindDataSourceById(srcId string) *dbqcore.DataSource {
 	return nil
 }
 
-func (app *DbqAppImpl) RunCheck(check *dbqcore.DataQualityCheck, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) (bool, string, error) {
-	dbqValidator, err := dbq.NewDbqValidator(dataSource, app.logger)
+func (app *DbqAppImpl) RunCheck(check *dbqcore.DataQualityCheck, dataSource *dbqcore.DataSource, dataset string, defaultWhere string) *dbqcore.ValidationResult {
+	validator := dbqcore.NewDbqDataValidator(app.logger)
+	adapter, err := dbq.NewDbqAdapter(dataSource, app.poolSize, app.logger)
 	if err != nil {
-		return false, "", err
+		return &dbqcore.ValidationResult{Error: err.Error()}
 	}
 
-	return dbqValidator.RunCheck(context.Background(), check, dataset, defaultWhere) // todo: ctx propagation
+	return validator.RunCheck(context.Background(), adapter, check, dataset, defaultWhere) // todo: ctx propagation
 }
 
 func (app *DbqAppImpl) SetLogLevel(logLevel slog.Level) {

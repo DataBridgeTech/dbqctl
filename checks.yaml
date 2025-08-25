@@ -1,72 +1,155 @@
 version: "1"
-validations:
+rules:
   # https://clickhouse.com/docs/getting-started/example-datasets/nyc-taxi
   - dataset: ch@[nyc_taxi.trips_small]
-    # common pre-filter for every check, e.g. to run daily check only for yesterday
     where: "pickup_datetime > '2014-01-01'"
     checks:
-      - id: row_count > 0
-        description: "data should be present" # optional
-        on_error: alert # optional (ignore, alert), default "alert"
+      # schema-level checks
+      - schema_check:
+          expect_columns_ordered:
+            columns_order: [trip_id, pickup_datetime, dropoff_datetime, pickup_longitude, pickup_latitude,
+                            dropoff_longitude, dropoff_latitude, passenger_count, trip_distance, fare_amount, extra,
+                            tip_amount, tolls_amount, total_amount, payment_type, pickup_ntaname, dropoff_ntaname]
+        desc: "Ensure table columns are in the expected order"
+        on_fail: error
 
-      - id: row_count between 100 and 30000
-        description: "expected rows count"
-        on_error: ignore
+      - schema_check:
+          expect_columns:
+            columns: [trip_id, fare_amount]
+        desc: "Ensure required columns exist"
+        on_fail: error
 
-      - id: null_count(pickup_ntaname) == 0
-        description: "no nulls are allowed in column: pickup_ntaname"
+      - schema_check:
+          columns_not_present:
+            columns: [credit_card_number, credit_card_cvv]
+            pattern: "pii_*"
+        desc: "Ensure PII and credit card info is not present in the table"
+        on_fail: error
 
-      - id: min(pickup_datetime) < now() - interval 3 day
-        description: "min(pickup_datetime) should not be earlier than 3 days"
+      # table-level checks
+      - row_count between 10000 and 3500000:
+          desc: "Dataset should contain a reasonable number of trips"
+          on_fail: error
 
-      - id: stddevPop(trip_distance) < 100_000
-        description: "check stddev value"
+      # column existence and nullability
+      - not_null(trip_id):
+          desc: "Trip ID is mandatory"
+      - not_null(pickup_datetime)
+      - not_null(dropoff_datetime)
 
-      - id: sum(fare_amount) <= 10_000_000
-        description: "sum of value"
+      # data freshness
+      - freshness(pickup_datetime) < 7d:
+          desc: "Data should be no older than 7 days"
+          on_fail: warn
 
-      - id: countIf(trip_id == 1) == 1
-        description: "check trip id"
+      # uniqueness constraints
+      - uniqueness(trip_id):
+          desc: "Trip IDs must be unique"
+          on_fail: error
 
-      - id: raw_query
-        description: "raw query quality test"
-        query: |
-          select countIf(trip_distance == 0) > 0 from {{table}} where 1=1
+      # numeric validations
+      - min(trip_distance) >= 0:
+          desc: "Trip distance cannot be negative"
+      - max(trip_distance) < 1000:
+          desc: "Maximum trip distance seems unrealistic"
+          on_fail: warn
+      - avg(trip_distance) between 1.0 and 20.0:
+          desc: "Average trip distance should be reasonable"
+      - stddev(trip_distance) < 100:
+          desc: "Trip distance variation should be within normal range"
+
+      # fare validations
+      - min(fare_amount) > 0:
+          desc: "Fare amount should be positive"
+      - max(fare_amount) < 1000:
+          desc: "Maximum fare seems too high"
+      - sum(fare_amount) between 10000 and 10000000:
+          desc: "Total fare amount should be within expected range"
+
+      # custom validation with raw query
+      - raw_query:
+          desc: "Check for trips with zero distance but positive fare"
+          query: "select count() from {{dataset}} where trip_distance = 0 and fare_amount > 0"
+          on_fail: warn
 
   # https://wiki.postgresql.org/wiki/Sample_Databases
   - dataset: pg@[public.land_registry_price_paid_uk]
-    # exclude January for example
-    where: "transfer_date >= '2025-02-01 00:00:00.000000'"
+    where: "transfer_date >= '2025-01-01'"
     checks:
-      - id: row_count > 0
-        description: "data should be present"
-        on_error: alert
+      # schema validation
+      - schema_check:
+          expect_columns_ordered:
+            columns_order: [transaction, price, transfer_date, postcode, property_type, newly_built, duration, paon, saon,
+                      street, locality, city, district, county, ppd_category_type, record_status]
+        desc: "Validate expected column order for data consistency"
+        on_fail: warn
 
-      - id: row_count between 200000 and 300000
-        description: "expected rows count"
-        on_error: ignore
+      - schema_check:
+          expect_columns:
+            columns: [transaction, price, property_type]
+        desc: "Ensure critical columns exist"
+        on_fail: error
 
-      - id: min(price) > 0
-        description: "min(price) should be greater than zero"
+      - row_count() between 100 and 250000:
+          desc: "Recent property transactions should be within expected volume"
 
-      - id: max(price) < 100000000
-        description: "max(price) should be less than 100_000_000"
+      # price checks
+      - not_null(price):
+          desc: "Property price is mandatory"
+      - min(price) >= 100:
+          desc: "Minimum price should be realistic"
+      - max(price) < 50000000:
+          desc: "Maximum price should be within UK market range"
+      - avg(price) between 200000 and 800000:
+          desc: "Average property price should align with market data"
+      - stddev(price) < 500000:
+          desc: "Price standard deviation should indicate reasonable market variation"
 
-      - id: stddev_pop(price) < 500000
-        description: "price stddev"
+      # property type validations
+      - not_null(property_type)
+      - uniqueness(transaction):
+          desc: "Each transaction must have a unique identifier"
+          on_fail: error
 
-  # https://github.com/datacharmer/test_db
+      # date validations
+      - freshness(transfer_date) < 1d:
+          desc: "Transfer date should be very recent"
+          on_fail: warn
+
+
+#  # https://github.com/datacharmer/test_db
   - dataset: mysql@[employees.salaries]
     checks:
-      - id: row_count > 0
-        description: "data should be present"
-        on_error: alert
+      # schema validation
+      - schema_check:
+          expect_columns_ordered:
+            columns_order: [order_id, customer_id, order_status, total_amount, item_count, created_at, shipped_date]
+        desc: "Ensure order table maintains expected column structure"
+        on_fail: error
 
-      - id: min(salary) > 0
-        description: "min(salary) should be greater than zero"
+      - schema_check:
+          expect_columns:
+            columns: [order_id, customer_id, order_status, total_amount]
+        desc: "Ensure essential order columns exist"
+        on_fail: error
 
-      - id: max(salary) < 150000
-        description: "max(salary) should be less than 150000"
+      # order volume validation
+      - row_count between 100 and 10000:
+          desc: "Monthly order volume should be within business expectations"
+          on_fail: warn
 
-      - id: stddev_pop(salary) < 50000
-        description: "price stddev"
+      # customer data integrity
+      - not_null(customer_id):
+          desc: "Every order must have a customer ID"
+          on_fail: error
+      - not_null(order_status)
+
+      # order value validations
+      - min(total_amount) > 0:
+          desc: "Order total must be positive"
+          on_fail: error
+      - max(total_amount) < 10000:
+          desc: "Unusually high order amount detected"
+          on_fail: warn
+      - avg(total_amount) between 25.0 and 200.0:
+          desc: "Average order value should align with business metrics"
